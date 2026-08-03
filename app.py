@@ -10,10 +10,11 @@ from googleapiclient.http import MediaIoBaseUpload
 import gspread
 
 # ==========================================
-# [1] 시스템 기본 설정 및 API 인증 정보
+# [1] 시스템 기본 설정 및 API 인증 정보 (보안 적용)
 # ==========================================
 st.set_page_config(page_title="협력업체 서류 심사 시스템", layout="wide", page_icon="📋")
 
+# 팩트: 실제 ID 값은 코드에 적지 않고, Streamlit 클라우드의 Secrets 메모리에서 안전하게 불러옵니다.
 DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 GOOGLE_SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
 SCOPES = [
@@ -25,6 +26,7 @@ SCOPES = [
 # [2] 외부 연동 함수
 # ==========================================
 def get_credentials():
+    # 팩트: JSON 파일 내용 전체를 코드가 아닌 Secrets에서 불러옵니다.
     return service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"], scopes=SCOPES
     )
@@ -69,8 +71,9 @@ def update_google_sheet_admin_score(unique_id, new_score):
         return str(e)
 
 def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
+    # 팩트: Gemini API 키 역시 Secrets에서 안전하게 불러옵니다.
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    vision_model = genai.GenerativeModel('gemini-2.5-flash')
+    vision_model = genai.GenerativeModel('gemini-1.5-flash')
     response = vision_model.generate_content([prompt_text, {"mime_type": mime_type, "data": file_buffer}])
     
     result_text = response.text
@@ -123,7 +126,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.chat_message("user").write(prompt)
             try:
                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                chat_model = genai.GenerativeModel('gemini-2.5-flash')
+                chat_model = genai.GenerativeModel('gemini-1.5-flash')
                 sys_ctx = "당신은 서류 심사 헬프데스크 직원입니다. 이메일: rhkrwjdgur@naver.com, 전화: 041-913-1175. 팩트 기반 안내 필수."
                 resp = chat_model.generate_content(sys_ctx + "\n질문: " + prompt)
                 st.session_state.messages.append({"role": "assistant", "content": resp.text})
@@ -308,7 +311,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         
                         drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
                         
-                        # 팩트: AI가 '제출 유무'가 아니라 '입력된 기준치 대비 실제 수치 이탈'을 잡아내도록 프롬프트 룰 강화
                         prompt = f"""당신은 엄격한 식품안전 품질 심사관입니다.
                         [심사항목]: {doc_name}
                         [업체 자체 관리 기준(반드시 지켜야 할 기준치)]: {criteria}
@@ -366,7 +368,7 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     st.dataframe(zero_score_df[['고유ID', '업체명', '심사항목', 'AI상세사유', '관리자최종점수', '드라이브링크']], use_container_width=True)
                     
                     st.markdown("---")
-                    st.markdown("### ✍️ 관리자 최종 점수 일괄 수정")
+                    st.markdown("### ✍️ 관리자 최종 점 일괄 수정")
                     col1, col2 = st.columns(2)
                     with col1:
                         target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", zero_score_df['고유ID'].tolist())
