@@ -70,7 +70,8 @@ def update_google_sheet_admin_score(unique_id, new_score):
 
 def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    vision_model = genai.GenerativeModel('gemini-1.5-flash')
+    # 팩트: 유료 버전 환경에 맞추어 최신 gemini-2.5-flash 모델 사용
+    vision_model = genai.GenerativeModel('gemini-2.5-flash')
     response = vision_model.generate_content([prompt_text, {"mime_type": mime_type, "data": file_buffer}])
     
     result_text = response.text
@@ -120,9 +121,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.chat_message("user").write(prompt)
             try:
                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                chat_model = genai.GenerativeModel('gemini-1.5-flash')
+                # 팩트: 챗봇 역시 최신 gemini-2.5-flash 모델 적용
+                chat_model = genai.GenerativeModel('gemini-2.5-flash')
                 
-                # 팩트: 매뉴얼(서류심사 체크리스트 작성 방법.pdf)의 내용을 완벽하게 학습시킴
                 sys_ctx = """
                 당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
                 아래의 '서류심사 체크리스트 작성 방법' 문서 규정을 엄격하게 적용하여 팩트만 답변하십시오.
@@ -182,8 +183,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         is_mfg = t1 or t2 or t3 or t4
         is_dist = t5 or t6
         
-        # 팩트: 문서 가이드라인에 따라 부자재와 세제류 업체는 검사시트가 면제되므로, 
-        # 원재료나 OEM, 수입, 유통 중 하나라도 체크되지 않았다면 검사시트를 안 보여주는 플래그를 생성합니다.
         requires_inspection_sheet = t1 or t3 or t5 or t6
 
         st.markdown("### 📋 Ⅳ. 인증상황")
@@ -263,7 +262,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 dist_data["클레임일지"] = render_upload_block("(4) 부적합(클레임) 관리 대장", "df4", "부적합품 식별 표시 및 반품 처리 내역 확인")
 
     # ----------------------------------------
-    # 탭 3: 검사내용 시트 (부자재, 세제류 업체는 조건부 면제)
+    # 탭 3: 검사내용 시트
     # ----------------------------------------
     mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
     mfg_coa_file, dist_coa_file = None, None
@@ -271,15 +270,14 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         if not is_mfg and not is_dist:
             st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
         elif not requires_inspection_sheet:
-            # 팩트: 문서 내용대로 부자재(제조), 세제류 외(제조) 업체는 검사시트 작성을 면제합니다.
             st.success("✅ 귀하의 거래 형태(부자재 또는 세제류 외)는 매뉴얼 규정에 따라 [검사내용 시트] 작성이 **면제**됩니다. 하단의 최종 제출 버튼을 눌러주십시오.")
         else:
-            if t1 or t3 or t6: # 원재료, OEM, 국내유통
+            if t1 or t3 or t6:
                 st.markdown("### 🧪 [제조/국내유통] 법적 기준 입력 및 성적서 대조")
                 mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
                 mfg_coa_file = st.file_uploader("위 표와 대조할 [자가/공인 검사 성적서] 원본 업로드", key="mdf_file")
                 
-            if t5: # 수입판매
+            if t5:
                 st.markdown("### 🚢 [수입판매] COA 통관 검사 기준 입력")
                 dist_df = st.data_editor(pd.DataFrame([{"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}]), num_rows="dynamic", key="ddf")
                 dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file")
