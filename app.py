@@ -12,7 +12,7 @@ import gspread
 # ==========================================
 # [1] 시스템 기본 설정 및 API 인증 정보
 # ==========================================
-st.set_page_config(page_title="식품심사 서류 제출 시스템", layout="wide", page_icon="📋")
+st.set_page_config(page_title="협력업체 서류 심사 시스템", layout="wide", page_icon="📋")
 
 DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 GOOGLE_SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
@@ -25,7 +25,6 @@ SCOPES = [
 # [2] 외부 연동 함수 (드라이브 & 시트 - Secrets 연동)
 # ==========================================
 def get_credentials():
-    """Streamlit Secrets에서 구글 클라우드 인증 정보를 불러옵니다."""
     return service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"], scopes=SCOPES
     )
@@ -69,206 +68,225 @@ def update_google_sheet_admin_score(unique_id, new_score):
     except Exception as e:
         return str(e)
 
+def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
+    """Gemini 2.5 Flash를 이용해 서류를 분석하고 결과를 반환합니다."""
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    vision_model = genai.GenerativeModel('gemini-2.5-flash')
+    response = vision_model.generate_content([prompt_text, {"mime_type": mime_type, "data": file_buffer}])
+    
+    result_text = response.text
+    judgment = "결과 파싱 실패"
+    if "판정결과:" in result_text:
+        parts = result_text.split("상세사유:")
+        judgment = parts[0].replace("판정결과:", "").strip()
+        reason = parts[1].strip() if len(parts) > 1 else result_text
+    else:
+        reason = result_text
+        if "만점" in result_text: judgment = "만점 부여"
+        elif "0점" in result_text: judgment = "0점 처리"
+        
+    admin_score = "만점 (AI판정)" if "만점" in judgment else "0점 (재확인요망)"
+    return judgment, reason, admin_score
+
 # ==========================================
 # [3] 사이드바 메뉴 구성
 # ==========================================
 st.sidebar.title("시스템 메뉴")
-menu = st.sidebar.radio("접속 화면을 선택하세요", ["업체 제출 화면 (1차 AI 검증)", "관리자 대시보드 (육안 재확인 및 수정)"])
+menu = st.sidebar.radio("접속 화면을 선택하세요", ["업체 서류 일괄 제출 (AI 검증)", "관리자 대시보드 (육안 재확인 및 수정)"])
 
 # ==========================================
-# [4] 업체 제출 화면 (엑셀 시트형 탭 UI 적용)
+# [4] 업체 서류 일괄 제출 화면 (동적 폼 & 일괄 검증)
 # ==========================================
-if menu == "업체 제출 화면 (1차 AI 검증)":
-    st.title("식품심사 서류 자동 제출 및 검증 (업체용)")
+if menu == "업체 서류 일괄 제출 (AI 검증)":
+    st.title("협력업체 서류 심사 일괄 제출 시스템")
     
-    # 헬프데스크 챗봇 영역 (API 키 입력란 제거, Secrets에서 자동 로드)
-    with st.expander("💬 서류 제출 방법이나 기준에 대해 궁금한 점을 챗봇에게 물어보세요!", expanded=False):
+    # 헬프데스크 챗봇
+    with st.expander("💬 챗봇 헬프데스크 (제출 기준 문의)", expanded=False):
         if "messages" not in st.session_state:
-            st.session_state.messages = [
-                {"role": "assistant", "content": "안녕하세요! 제출 안내 매뉴얼에 기반하여 답변해 드립니다. 어떤 점이 궁금하신가요?"}
-            ]
+            st.session_state.messages = [{"role": "assistant", "content": "제출 안내 매뉴얼에 기반하여 답변해 드립니다."}]
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).write(msg["content"])
-
         if prompt := st.chat_input("질문을 입력하세요..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             st.chat_message("user").write(prompt)
-            
             try:
-                # Secrets에서 Gemini API 키 로드
                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                chat_model = genai.GenerativeModel('gemini-1.5-flash')
-                system_context = """
-                당신은 서류 심사 헬프데스크 직원입니다. 
-                - 이메일: rhkrwjdgur@naver.com, 전화: 041-913-1175
-                - 공통 시트는 1부만, 개별/검사 시트는 납품 유형별 전부 작성
-                - 부자재(제조)는 내/외포장재 납품업체
-                - 대외비(배합비 등)는 민감 수치를 지우고 제출 가능
-                위 팩트를 기반으로 친절하게 안내하십시오.
-                """
-                response = chat_model.generate_content(system_context + "\n질문: " + prompt)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-                st.chat_message("assistant").write(response.text)
+                chat_model = genai.GenerativeModel('gemini-2.5-flash')
+                sys_ctx = "당신은 서류 심사 헬프데스크 직원입니다. 이메일: rhkrwjdgur@naver.com, 전화: 041-913-1175. 팩트 기반 안내 필수."
+                resp = chat_model.generate_content(sys_ctx + "\n질문: " + prompt)
+                st.session_state.messages.append({"role": "assistant", "content": resp.text})
+                st.chat_message("assistant").write(resp.text)
             except Exception as e:
-                st.error(f"챗봇 연결 오류가 발생했습니다: {e}")
-                    
+                st.error("챗봇 오류")
+                
     st.markdown("---")
-    st.markdown("아래의 탭(Tab)을 순서대로 클릭하여 엑셀 시트와 동일한 방식으로 서류를 제출해 주십시오.")
-
-    tab1, tab2, tab3 = st.tabs(["[1] 공통 시트 (기본 정보)", "[2] 개별 시트 (서류 제출)", "[3] 검사내용 시트 (성적서 대조)"])
+    
+    # 탭 구성 (UI 표시용)
+    tab1, tab2, tab3 = st.tabs(["[1] 공통 시트", "[2] 개별 시트", "[3] 검사내용 시트"])
 
     # ----------------------------------------
     # 탭 1: 공통 시트 영역
     # ----------------------------------------
     with tab1:
-        st.markdown("### 🏢 공통 시트 작성")
-        company_name = st.text_input("업체명을 입력하세요:")
-        trade_type = st.selectbox("거래 형태를 선택하세요:", ["원재료(제조)", "부자재(제조)", "OEM", "수입판매", "국내유통(미제조)"])
-        st.info("이곳에 입력한 업체명은 다음 시트(탭)에서도 자동으로 연동됩니다.")
+        st.markdown("### 🏢 공통 프로필 및 거래 형태")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            company_name = st.text_input("업체명 (필수):")
+            ceo_name = st.text_input("대표자:")
+        with col_b:
+            biz_type = st.text_input("영업의 종류:")
+            manager_email = st.text_input("담당자 이메일:")
+            
+        st.markdown("#### 📌 거래 형태 (체크 시 다음 탭의 서류 목록이 자동 변환됩니다)")
+        trade_mfg = st.checkbox("원재료(제조), 부자재(제조), OEM, 세제류 외(제조)")
+        trade_dist = st.checkbox("수입판매, 국내유통(미제조)")
 
     # ----------------------------------------
-    # 탭 2: 개별 시트 영역 (제조 및 공정 서류)
+    # 탭 2: 개별 시트 영역 (전체 목록 노출)
     # ----------------------------------------
     with tab2:
-        st.markdown(f"### 📋 개별 시트 서류 제출 (선택된 형태: {trade_type if 'trade_type' in locals() else '미선택'})")
-        document_type_2 = st.selectbox(
-            "제출할 서류 항목 선택 (개별 시트):",
-            ["선택해주세요", "영업등록증", "CCP 가열/멸균 공정 일지", "CCP 금속검출 공정 일지", "조도 관리 대장", "보건증", "위생교육 수료증"],
-            key="doc_type_tab2"
-        )
-
-        custom_criteria_2 = ""
-        if document_type_2 == "CCP 가열/멸균 공정 일지":
+        if not trade_mfg and not trade_dist:
+            st.info("💡 [공통 시트]에서 거래 형태를 체크하시면 제출해야 할 서류 목록이 이곳에 전체적으로 노출됩니다.")
+            
+        # 팩트: 제조 관련 전체 서류 목록
+        mfg_files = {}
+        if trade_mfg:
+            st.markdown("### 🏭 [제조] 평가항목 전체 서류 업로드")
+            st.caption("해당되는 증빙자료를 스캔하여 슬롯별로 업로드해 주십시오.")
             col1, col2 = st.columns(2)
             with col1:
-                temp_limit = st.text_input("기준 온도 (예: 121℃ 이상)", key="temp_tab2")
-                time_limit = st.text_input("기준 시간 (예: 15분 이상)", key="time_tab2")
-            custom_criteria_2 = f"기준 온도: {temp_limit}, 기준 시간: {time_limit}"
-        elif document_type_2 == "CCP 금속검출 공정 일지":
-            fe_size = st.text_input("Fe (철) 기준", key="fe_tab2")
-            sus_size = st.text_input("SUS (스테인리스) 기준", key="sus_tab2")
-            custom_criteria_2 = f"Fe 기준: {fe_size}, SUS 기준: {sus_size}"
-        elif document_type_2 == "조도 관리 대장":
-            lux_limit = st.text_input("기준 조도", key="lux_tab2")
-            custom_criteria_2 = f"기준 조도: {lux_limit}"
-        elif document_type_2 in ["영업등록증", "보건증", "위생교육 수료증"]:
-            custom_criteria_2 = f"{document_type_2} 필수 기재사항 확인 및 유효기간 만료 여부 확인"
+                st.markdown("**1. 서류관리**")
+                mfg_files["영업허가증"] = st.file_uploader("① 영업허가증/신고증", key="m1")
+                mfg_files["인증서"] = st.file_uploader("② 인증서 (HACCP, FSSC 등)", key="m2")
+                mfg_files["품목제조보고서"] = st.file_uploader("③ 품목제조보고서", key="m3")
+                mfg_files["원료수불부"] = st.file_uploader("④ 원료수불부 (최근 1개월)", key="m4")
+                mfg_files["보건증"] = st.file_uploader("⑤ 건강진단서 (보건증)", key="m5")
+            with col2:
+                st.markdown("**2. 환경 및 시설관리**")
+                mfg_files["위생교육"] = st.file_uploader("⑥ 위생교육 수료증", key="m6")
+                mfg_files["수질검사"] = st.file_uploader("⑦ 수질검사 성적서 (지하수 시)", key="m7")
+                mfg_files["검교정일지"] = st.file_uploader("⑧ 계측기 검교정 성적서/일지", key="m8")
+                mfg_files["방충방서"] = st.file_uploader("⑨ 방충방서 소독 일지", key="m9")
+                mfg_files["온도기록"] = st.file_uploader("⑩ 냉장/냉동 창고 온도기록지", key="m10")
+            st.markdown("---")
 
-        uploaded_file_2 = st.file_uploader(f"[{document_type_2}] 스캔본 업로드", type=["pdf", "jpg", "png"], key="file_tab2")
-
-        if st.button("개별 시트 서류 제출 및 검증", key="btn_tab2"):
-            if document_type_2 == "선택해주세요" or not company_name or not uploaded_file_2:
-                st.warning("공통 시트의 업체명 설정 및 업로드 파일을 모두 확인해 주십시오.")
-            else:
-                with st.spinner("개별 시트 서류 분석 및 구글 시트 연동 중..."):
-                    try:
-                        current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                        formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        unique_id = f"{company_name}_{current_time_str}"
-                        file_name = f"{unique_id}_{uploaded_file_2.name}"
-                        
-                        file_buffer = io.BytesIO(uploaded_file_2.getvalue())
-                        drive_link = upload_to_google_drive(file_buffer, file_name, uploaded_file_2.type)
-                        
-                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        vision_model = genai.GenerativeModel('gemini-1.5-flash')
-                        
-                        prompt = f"""
-                        당신은 전문 심사관입니다.
-                        [항목]: {document_type_2}
-                        [입력기준]: {custom_criteria_2}
-                        
-                        지시사항:
-                        1. 이미지 내 수기 기록을 확인하십시오.
-                        2. 모든 기록이 입력기준을 100% 충족하면 '만점 부여'.
-                        3. 기준 이탈, 서류 불일치 시 '0점 처리'로 판정하십시오.
-                        
-                        출력양식:
-                        판정결과: (만점 부여 또는 0점 처리)
-                        상세사유: (팩트 기재)
-                        """
-                        response = vision_model.generate_content([prompt, {"mime_type": uploaded_file_2.type, "data": uploaded_file_2.getvalue()}])
-                        
-                        result_text = response.text
-                        judgment = "결과 파싱 실패"
-                        if "판정결과:" in result_text:
-                            parts = result_text.split("상세사유:")
-                            judgment = parts[0].replace("판정결과:", "").strip()
-                            reason = parts[1].strip() if len(parts) > 1 else result_text
-
-                        admin_score = "만점 (AI판정)" if "만점" in judgment else "0점 (재확인요망)"
-                        row_data = [unique_id, formatted_time, company_name, document_type_2, custom_criteria_2, judgment, reason, admin_score, drive_link]
-                        append_to_google_sheet(row_data)
-                        
-                        st.success("개별 시트 검증 완료!")
-                        st.info(result_text)
-                    except Exception as e:
-                        st.error(f"오류 발생: {e}")
+        # 팩트: 유통/수입 관련 전체 서류 목록
+        dist_files = {}
+        if trade_dist:
+            st.markdown("### 🚚 [유통/수입] 평가항목 전체 서류 업로드")
+            col3, col4 = st.columns(2)
+            with col3:
+                st.markdown("**1. 유통 서류관리**")
+                dist_files["수입신고필증"] = st.file_uploader("① 수입신고필증 및 COA", key="d1")
+                dist_files["제조사성적서"] = st.file_uploader("② 제조사 자가/공인 성적서", key="d2")
+            with col4:
+                st.markdown("**2. 보관 및 출고관리**")
+                dist_files["차량타코메타"] = st.file_uploader("③ 입고/보관/차량 타코메타 기록지", key="d3")
+                dist_files["클레임일지"] = st.file_uploader("④ 부적합(클레임) 관리 대장", key="d4")
+            st.markdown("---")
 
     # ----------------------------------------
-    # 탭 3: 검사내용 시트 영역 (법적 성적서 제출)
+    # 탭 3: 검사내용 시트 (데이터 그리드 & 성적서)
     # ----------------------------------------
     with tab3:
-        st.markdown("### 🧪 검사내용 시트 (법적 기준 및 성적서 대조)")
-        document_type_3 = st.selectbox(
-            "제출할 검사 항목 선택:",
-            ["선택해주세요", "자가품질검사 성적서", "공인기관 검사 성적서", "수질검사 성적서"],
-            key="doc_type_tab3"
-        )
+        if not trade_mfg and not trade_dist:
+            st.info("💡 [공통 시트]에서 거래 형태를 체크하시면 양식이 활성화됩니다.")
+            
+        mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
+        mfg_coa_file, dist_coa_file = None, None
         
-        st.info("검사내용 엑셀 시트에서 작성하던 법적 기준을 아래에 입력하십시오. (예: 납 3.5ppm 이하)")
-        legal_criteria = st.text_area("해당 제품의 국내 법적 기준 및 자가 검사 기준 입력:", key="legal_criteria")
-        
-        uploaded_file_3 = st.file_uploader(f"[{document_type_3}] 스캔본 업로드", type=["pdf", "jpg", "png"], key="file_tab3")
-        
-        if st.button("검사내용 시트 서류 제출 및 검증", key="btn_tab3"):
-            if document_type_3 == "선택해주세요" or not company_name or not uploaded_file_3 or not legal_criteria:
-                st.warning("공통 시트의 업체명 설정, 법적 기준, 업로드 파일을 모두 확인해 주십시오.")
+        if trade_mfg:
+            st.markdown("### 🧪 [제조] 법적 기준 입력 및 성적서 대조")
+            mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
+            mfg_coa_file = st.file_uploader("위 표와 대조할 [자가/공인 검사 성적서] 원본 업로드", key="mdf_file")
+            
+        if trade_dist:
+            st.markdown("### 🚢 [수입] COA 통관 검사 기준 입력")
+            dist_df = st.data_editor(pd.DataFrame([{"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}]), num_rows="dynamic", key="ddf")
+            dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file")
+
+    # ==========================================
+    # 제출 트리거 (폼 하단 일괄 제출)
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 📝 최종 제출")
+    
+    if st.button("🚀 전체 서류 일괄 제출 및 통합 AI 검증 시작", type="primary", use_container_width=True):
+        if not company_name:
+            st.error("오류: 공통 시트에 [업체명]을 반드시 입력해 주십시오.")
+        elif not trade_mfg and not trade_dist:
+            st.error("오류: 거래 형태를 최소 1개 이상 선택해 주십시오.")
+        else:
+            # 처리할 파일들을 담을 리스트 구성
+            tasks = []
+            
+            # 제조 서류 취합
+            if trade_mfg:
+                for doc_name, file_obj in mfg_files.items():
+                    if file_obj:
+                        tasks.append({"doc_name": f"[제조] {doc_name}", "criteria": f"{doc_name} 필수 정보 및 유효기간 확인", "file": file_obj})
+                if mfg_coa_file:
+                    grid_data = mfg_df.to_dict('records')
+                    tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 대조", "file": mfg_coa_file})
+            
+            # 유통/수입 서류 취합
+            if trade_dist:
+                for doc_name, file_obj in dist_files.items():
+                    if file_obj:
+                        tasks.append({"doc_name": f"[유통] {doc_name}", "criteria": f"{doc_name} 필수 정보 확인", "file": file_obj})
+                if dist_coa_file:
+                    grid_data = dist_df.to_dict('records')
+                    tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "file": dist_coa_file})
+                    
+            if not tasks:
+                st.warning("업로드된 서류가 하나도 없습니다. 탭을 확인하여 서류를 첨부해 주십시오.")
             else:
-                with st.spinner("검사 성적서 수치 분석 및 구글 시트 연동 중..."):
+                # 일괄 처리 진행바 노출
+                progress_text = "AI가 제출된 서류 전체를 분석 중입니다..."
+                my_bar = st.progress(0, text=progress_text)
+                
+                success_count = 0
+                for idx, task in enumerate(tasks):
+                    doc_name = task["doc_name"]
+                    file_obj = task["file"]
+                    criteria = task["criteria"]
+                    
                     try:
+                        # 1. 파일 이름 설정 및 버퍼 읽기
                         current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                         formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        unique_id = f"{company_name}_검사_{current_time_str}"
-                        file_name = f"{unique_id}_{uploaded_file_3.name}"
+                        unique_id = f"{company_name}_{doc_name}_{current_time_str}"
+                        file_name = f"{unique_id}_{file_obj.name}"
+                        file_buffer = io.BytesIO(file_obj.getvalue())
                         
-                        file_buffer = io.BytesIO(uploaded_file_3.getvalue())
-                        drive_link = upload_to_google_drive(file_buffer, file_name, uploaded_file_3.type)
+                        # 2. 구글 드라이브 업로드
+                        drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
                         
-                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        vision_model = genai.GenerativeModel('gemini-1.5-flash')
-                        
-                        prompt = f"""
-                        당신은 식품 규격 성적서를 검증하는 전문 심사관입니다.
-                        [항목]: {document_type_3}
-                        [법적 기준]: {legal_criteria}
-                        
-                        지시사항:
-                        1. 성적서 이미지 내의 실제 검사 결과 수치(결과값)를 확인하십시오.
-                        2. 성적서의 결과 수치가 제시된 [법적 기준]의 허용 범위 이내이거나 불검출인 경우 '만점 부여'.
-                        3. 기준을 초과하거나 검출된 경우 '0점 처리'.
-                        
+                        # 3. Gemini AI 판독 수행
+                        prompt = f"""당신은 전문 심사관입니다.
+                        [항목]: {doc_name}
+                        [입력기준]: {criteria}
+                        지시사항: 이미지 내 수치를 확인하여 기준을 100% 충족하면 '만점 부여', 미달 시 '0점 처리'로 판정.
                         출력양식:
                         판정결과: (만점 부여 또는 0점 처리)
-                        상세사유: (성적서에서 확인한 정확한 팩트 수치 기재)
-                        """
-                        response = vision_model.generate_content([prompt, {"mime_type": uploaded_file_3.type, "data": uploaded_file_3.getvalue()}])
+                        상세사유: (팩트 기재)"""
                         
-                        result_text = response.text
-                        judgment = "결과 파싱 실패"
-                        if "판정결과:" in result_text:
-                            parts = result_text.split("상세사유:")
-                            judgment = parts[0].replace("판정결과:", "").strip()
-                            reason = parts[1].strip() if len(parts) > 1 else result_text
-
-                        admin_score = "만점 (AI판정)" if "만점" in judgment else "0점 (재확인요망)"
-                        row_data = [unique_id, formatted_time, company_name, document_type_3, legal_criteria, judgment, reason, admin_score, drive_link]
+                        judgment, reason, admin_score = analyze_document_with_ai(prompt, file_obj.getvalue(), file_obj.type)
+                        
+                        # 4. 구글 시트 1줄 추가
+                        row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link]
                         append_to_google_sheet(row_data)
+                        success_count += 1
                         
-                        st.success("검사내용 성적서 검증 완료!")
-                        st.info(result_text)
                     except Exception as e:
-                        st.error(f"오류 발생: {e}")
+                        st.error(f"{doc_name} 처리 중 오류 발생: {e}")
+                        
+                    # 진행률 업데이트
+                    my_bar.progress((idx + 1) / len(tasks), text=f"({idx+1}/{len(tasks)}) {doc_name} 검증 완료...")
+                
+                my_bar.empty()
+                st.success(f"🎉 총 {success_count}개의 서류가 구글 드라이브 저장, 시트 기록, AI 검증까지 완벽하게 일괄 완료되었습니다!")
+                st.balloons()
 
 # ==========================================
 # [5] 관리자 대시보드
@@ -298,7 +316,7 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     st.dataframe(zero_score_df[['고유ID', '업체명', '심사항목', 'AI상세사유', '관리자최종점수', '드라이브링크']], use_container_width=True)
                     
                     st.markdown("---")
-                    st.markdown("### ✍️ 관리자 최종 점수 구글 시트 수정 (Override)")
+                    st.markdown("### ✍️ 관리자 최종 점수 일괄 수정 (Override)")
                     col1, col2 = st.columns(2)
                     with col1:
                         target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", zero_score_df['고유ID'].tolist())
