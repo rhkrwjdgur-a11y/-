@@ -14,8 +14,8 @@ import gspread
 # ==========================================
 st.set_page_config(page_title="식품심사 서류 제출 시스템", layout="wide", page_icon="📋")
 
-DRIVE_FOLDER_ID = '여기에_구글_드라이브_폴더_ID를_입력하세요'
-GOOGLE_SHEET_ID = '여기에_구글_스프레드시트_ID를_입력하세요'
+DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
+GOOGLE_SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
 SCOPES = [
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets'
