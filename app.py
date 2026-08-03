@@ -10,11 +10,10 @@ from googleapiclient.http import MediaIoBaseUpload
 import gspread
 
 # ==========================================
-# [1] 시스템 기본 설정 및 API 인증 정보 (보안 적용)
+# [1] 시스템 기본 설정
 # ==========================================
 st.set_page_config(page_title="협력업체 서류 심사 시스템", layout="wide", page_icon="📋")
 
-# 팩트: 실제 ID 값은 코드에 적지 않고, Streamlit 클라우드의 Secrets 메모리에서 안전하게 불러옵니다.
 DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 GOOGLE_SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
 SCOPES = [
@@ -26,7 +25,6 @@ SCOPES = [
 # [2] 외부 연동 함수
 # ==========================================
 def get_credentials():
-    # 팩트: JSON 파일 내용 전체를 코드가 아닌 Secrets에서 불러옵니다.
     return service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"], scopes=SCOPES
     )
@@ -71,7 +69,6 @@ def update_google_sheet_admin_score(unique_id, new_score):
         return str(e)
 
 def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
-    # 팩트: Gemini API 키 역시 Secrets에서 안전하게 불러옵니다.
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     vision_model = genai.GenerativeModel('gemini-1.5-flash')
     response = vision_model.generate_content([prompt_text, {"mime_type": mime_type, "data": file_buffer}])
@@ -90,13 +87,10 @@ def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
     admin_score = "만점 (AI판정)" if "만점" in judgment else "0점 (재확인요망)"
     return judgment, reason, admin_score
 
-# ==========================================
-# [UI 헬퍼 함수] 업체 자가 기준 입력 + 파일 업로드
-# ==========================================
 def render_upload_block(label, key_prefix, default_criteria_hint):
     st.markdown(f"**{label}**")
     crit = st.text_input(
-        "💡 [업체 자체 관리 기준 입력] (AI가 이 수치를 기준으로 이탈 여부를 판독합니다)", 
+        "💡 [업체 자체 관리 기준 입력] (AI 판독 기준치)", 
         value=default_criteria_hint, 
         key=f"{key_prefix}_crit"
     )
@@ -118,7 +112,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     
     with st.expander("💬 챗봇 헬프데스크 (제출 기준 문의)", expanded=False):
         if "messages" not in st.session_state:
-            st.session_state.messages = [{"role": "assistant", "content": "제출 안내 매뉴얼에 기반하여 답변해 드립니다."}]
+            st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다."}]
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).write(msg["content"])
         if prompt := st.chat_input("질문을 입력하세요..."):
@@ -127,14 +121,35 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             try:
                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                 chat_model = genai.GenerativeModel('gemini-1.5-flash')
-                sys_ctx = "당신은 서류 심사 헬프데스크 직원입니다. 이메일: rhkrwjdgur@naver.com, 전화: 041-913-1175. 팩트 기반 안내 필수."
+                
+                # 팩트: 매뉴얼(서류심사 체크리스트 작성 방법.pdf)의 내용을 완벽하게 학습시킴
+                sys_ctx = """
+                당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
+                아래의 '서류심사 체크리스트 작성 방법' 문서 규정을 엄격하게 적용하여 팩트만 답변하십시오.
+                
+                [기본 연락처]
+                - 담당자: 식품안전팀 박병규 (pbk0925@yonseidairy.com)
+                - 전화번호: 041-913-2121 / 010-2656-6650
+                
+                [거래형태별 제출 시트 규정]
+                1. 원재료(제조) 및 OEM: 공통시트 + 개별시트(제조) + 검사시트 작성
+                2. 부자재(제조) 및 세제류 외(제조): 공통시트 + 개별시트(제조) 작성 (검사내용 시트는 작성 X 면제됨)
+                3. 수입판매 및 국내유통(미제조): 공통시트 + 개별시트(수입/유통) + 검사시트 작성
+                
+                [자주 묻는 질문(FAQ) 팩트]
+                - 두 가지 이상 납품 시: 공통시트는 1회만, 개별/검사시트는 유형별로 전부 다 작성해야 합니다.
+                - 부자재(제조) 업체란: 내, 외포장재 납품업체를 의미합니다.
+                - 파일 제출 범위: '품목제조보고서'와 '자가/공인 검사 성적서'는 납품하는 전 품목을 내야 하고, 나머지 품질일지나 교육 수료증 등은 '최근 1개월 내 대표 샘플 1부'만 내면 됩니다.
+                - 대외비 서류: 배합비 등 민감한 수치는 지우고(블라인드) 제출해도 무방합니다. 단 양식과 기준은 보여야 합니다.
+                """
+                
                 resp = chat_model.generate_content(sys_ctx + "\n질문: " + prompt)
                 st.session_state.messages.append({"role": "assistant", "content": resp.text})
                 st.chat_message("assistant").write(resp.text)
             except Exception as e:
                 st.error(f"챗봇 상세 오류: {e}")
                 
-    st.info("📌 [공통 시트] → [개별 시트] → [검사내용 시트] 순서대로 입력 및 서류 첨부 후, 맨 아래 **[최종 일괄 제출]** 버튼을 누르십시오.")
+    st.info("📌 작성 방법: [공통 시트] → [개별 시트] → [검사내용 시트] 순서대로 입력 후 맨 아래 **[최종 일괄 제출]** 버튼을 누르십시오.")
     
     tab1, tab2, tab3 = st.tabs(["[1] 공통 시트", "[2] 개별 시트", "[3] 검사내용 시트"])
 
@@ -152,6 +167,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             manager_email = st.text_input("담당자 이메일:")
             
         st.markdown("### 📌 Ⅱ. 거래 형태 (복수선택 가능)")
+        st.caption("주의: 2가지 이상 납품 시 모두 체크하셔야 해당 폼이 활성화됩니다.")
         col_t1, col_t2, col_t3 = st.columns(3)
         with col_t1:
             t1 = st.checkbox("원재료(제조)")
@@ -165,6 +181,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             
         is_mfg = t1 or t2 or t3 or t4
         is_dist = t5 or t6
+        
+        # 팩트: 문서 가이드라인에 따라 부자재와 세제류 업체는 검사시트가 면제되므로, 
+        # 원재료나 OEM, 수입, 유통 중 하나라도 체크되지 않았다면 검사시트를 안 보여주는 플래그를 생성합니다.
+        requires_inspection_sheet = t1 or t3 or t5 or t6
 
         st.markdown("### 📋 Ⅳ. 인증상황")
         cert_df_init = pd.DataFrame([
@@ -188,7 +208,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             v_insp_detail = st.text_input("검사항목 변동 내용 기재:", disabled=not v_insp)
 
     # ----------------------------------------
-    # 탭 2: 개별 시트 (27개 세부항목 및 기준 폼)
+    # 탭 2: 개별 시트
     # ----------------------------------------
     mfg_data = {}
     dist_data = {}
@@ -198,13 +218,14 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             
         if is_mfg:
             st.markdown("### 🏭 [제조] 서류 심사 (업체 기준치 세부 입력)")
+            st.caption("※ 증빙자료 업로드 원칙: 품목제조보고서와 자가/공인 성적서는 '납품 전 품목', 나머지는 '최근 1개월 대표 샘플 1부'를 업로드합니다.")
             
             with st.expander("1. 서류관리 (8개 항목)", expanded=True):
                 mfg_data["영업신고"] = render_upload_block("(1) 영업허가증/신고증", "mf1", "사업현황 및 생산제품 유형 일치 여부 확인")
                 mfg_data["인증서"] = render_upload_block("(2) 인증서 종류별 (HACCP, ISO 등)", "mf2", "인증 사항 일치 및 유효기간 만료 여부 확인")
-                mfg_data["품목제조보고"] = render_upload_block("(3) 품목제조보고서 (전 품목)", "mf3", "제품명/원료/유통기한 신고 내역 일치 여부")
+                mfg_data["품목제조보고"] = render_upload_block("(3) 품목제조보고서 (납품 전 품목)", "mf3", "제품명/원료/유통기한 신고 내역 일치 여부")
                 mfg_data["원료수불부"] = render_upload_block("(4) 원료수불부", "mf4", "원료 입고/출고/사용 기록 매일 작성 및 누락 여부")
-                mfg_data["자가품질검사"] = render_upload_block("(5) 자가/공인 검사 성적서", "mf5", "주기적 실시 및 전 항목 적합 판정 여부")
+                mfg_data["자가품질검사"] = render_upload_block("(5) 자가/공인 검사 성적서 (납품 전 품목)", "mf5", "주기적 실시 및 전 항목 적합 판정 여부")
                 mfg_data["건강진단"] = render_upload_block("(6) 건강진단서 (보건증)", "mf6", "종사자 전원 실시 및 유효기간 이탈 여부")
                 mfg_data["위생교육"] = render_upload_block("(7) 법정 교육 수료증", "mf7", "영업자 위생교육 이수 여부")
                 mfg_data["수질검사"] = render_upload_block("(8) 수질검사 성적서", "mf8", "용수 전 항목 적합 여부 (상수도 외 지하수 사용 시)")
@@ -237,28 +258,31 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.markdown("### 🚚 [유통/수입] 평가항목 서류 및 기준 입력")
             with st.expander("유통 서류 관리", expanded=True):
                 dist_data["수입신고필증"] = render_upload_block("(1) 수입신고필증 및 COA", "df1", "수입신고 내역 일치 및 COA 제출 여부")
-                dist_data["제조사성적서"] = render_upload_block("(2) 제조사 자가/공인 성적서", "df2", "수령 주기 확인 및 검사결과 적합 여부")
+                dist_data["제조사성적서"] = render_upload_block("(2) 제조사 자가/공인 성적서 (납품 전 품목)", "df2", "수령 주기 확인 및 검사결과 적합 여부")
                 dist_data["차량타코메타"] = render_upload_block("(3) 차량 타코메타 기록지", "df3", "입고/보관 시 지정 온도 한계 이탈 여부 확인")
                 dist_data["클레임일지"] = render_upload_block("(4) 부적합(클레임) 관리 대장", "df4", "부적합품 식별 표시 및 반품 처리 내역 확인")
 
     # ----------------------------------------
-    # 탭 3: 검사내용 시트
+    # 탭 3: 검사내용 시트 (부자재, 세제류 업체는 조건부 면제)
     # ----------------------------------------
     mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
     mfg_coa_file, dist_coa_file = None, None
     with tab3:
         if not is_mfg and not is_dist:
             st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
-            
-        if is_mfg:
-            st.markdown("### 🧪 [제조] 법적 기준 입력 및 성적서 대조")
-            mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
-            mfg_coa_file = st.file_uploader("위 표와 대조할 [자가/공인 검사 성적서] 원본 업로드", key="mdf_file")
-            
-        if is_dist:
-            st.markdown("### 🚢 [수입] COA 통관 검사 기준 입력")
-            dist_df = st.data_editor(pd.DataFrame([{"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}]), num_rows="dynamic", key="ddf")
-            dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file")
+        elif not requires_inspection_sheet:
+            # 팩트: 문서 내용대로 부자재(제조), 세제류 외(제조) 업체는 검사시트 작성을 면제합니다.
+            st.success("✅ 귀하의 거래 형태(부자재 또는 세제류 외)는 매뉴얼 규정에 따라 [검사내용 시트] 작성이 **면제**됩니다. 하단의 최종 제출 버튼을 눌러주십시오.")
+        else:
+            if t1 or t3 or t6: # 원재료, OEM, 국내유통
+                st.markdown("### 🧪 [제조/국내유통] 법적 기준 입력 및 성적서 대조")
+                mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
+                mfg_coa_file = st.file_uploader("위 표와 대조할 [자가/공인 검사 성적서] 원본 업로드", key="mdf_file")
+                
+            if t5: # 수입판매
+                st.markdown("### 🚢 [수입판매] COA 통관 검사 기준 입력")
+                dist_df = st.data_editor(pd.DataFrame([{"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}]), num_rows="dynamic", key="ddf")
+                dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file")
 
     # ==========================================
     # 🚀 최종 통합 제출 버튼
@@ -278,9 +302,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 for doc_name, data in mfg_data.items():
                     if data["file"]:
                         tasks.append({"doc_name": f"[제조] {doc_name}", "criteria": data["criteria"], "file": data["file"]})
-                if mfg_coa_file:
-                    grid_data = mfg_df.to_dict('records')
-                    tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "file": mfg_coa_file})
+            
+            if requires_inspection_sheet and mfg_coa_file:
+                grid_data = mfg_df.to_dict('records')
+                tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "file": mfg_coa_file})
             
             if is_dist:
                 for doc_name, data in dist_data.items():
@@ -368,7 +393,7 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     st.dataframe(zero_score_df[['고유ID', '업체명', '심사항목', 'AI상세사유', '관리자최종점수', '드라이브링크']], use_container_width=True)
                     
                     st.markdown("---")
-                    st.markdown("### ✍️ 관리자 최종 점 일괄 수정")
+                    st.markdown("### ✍️ 관리자 최종 점수 일괄 수정")
                     col1, col2 = st.columns(2)
                     with col1:
                         target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", zero_score_df['고유ID'].tolist())
