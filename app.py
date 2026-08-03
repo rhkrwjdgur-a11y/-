@@ -89,6 +89,15 @@ def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
     return judgment, reason, admin_score
 
 # ==========================================
+# [UI 헬퍼 함수] 기준 입력과 파일 업로드를 묶어서 렌더링
+# ==========================================
+def render_upload_block(label, key_prefix, default_criteria):
+    st.markdown(f"**{label}**")
+    crit = st.text_input("심사 기준:", value=default_criteria, key=f"{key_prefix}_crit")
+    file = st.file_uploader("스캔본 업로드", key=f"{key_prefix}_file", label_visibility="collapsed")
+    return {"criteria": crit, "file": file}
+
+# ==========================================
 # [3] 사이드바 메뉴 구성
 # ==========================================
 st.sidebar.title("시스템 메뉴")
@@ -117,7 +126,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 st.session_state.messages.append({"role": "assistant", "content": resp.text})
                 st.chat_message("assistant").write(resp.text)
             except Exception as e:
-                st.error("챗봇 오류")
+                st.error(f"챗봇 상세 오류: {e}")
                 
     st.markdown("---")
     st.info("📌 [공통 시트] → [개별 시트] → [검사내용 시트] 순서대로 입력 및 서류를 첨부하신 후, 맨 아래의 **[최종 일괄 제출]** 버튼을 단 1회만 눌러주시면 됩니다.")
@@ -126,10 +135,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     tab1, tab2, tab3 = st.tabs(["[1] 공통 시트", "[2] 개별 시트", "[3] 검사내용 시트"])
 
     # ----------------------------------------
-    # 탭 1: 공통 시트 영역
+    # 탭 1: 공통 시트 영역 (인증상황/변동사항/6가지 거래형태 반영)
     # ----------------------------------------
     with tab1:
-        st.markdown("### 🏢 공통 프로필 및 거래 형태")
+        st.markdown("### 🏢 Ⅲ. 업체 프로필")
         col_a, col_b = st.columns(2)
         with col_a:
             company_name = st.text_input("업체명 (필수):")
@@ -138,49 +147,82 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             biz_type = st.text_input("영업의 종류:")
             manager_email = st.text_input("담당자 이메일:")
             
-        st.markdown("#### 📌 거래 형태 (체크 시 개별 시트 서류 목록이 자동 등록됩니다)")
-        trade_mfg = st.checkbox("원재료(제조), 부자재(제조), OEM, 세제류 외(제조)")
-        trade_dist = st.checkbox("수입판매, 국내유통(미제조)")
+        st.markdown("### 📌 Ⅱ. 거래 형태 (복수선택 가능)")
+        col_t1, col_t2, col_t3 = st.columns(3)
+        with col_t1:
+            t1 = st.checkbox("원재료(제조)")
+            t4 = st.checkbox("세제류 외(제조)")
+        with col_t2:
+            t2 = st.checkbox("부자재(제조)")
+            t5 = st.checkbox("수입판매")
+        with col_t3:
+            t3 = st.checkbox("OEM")
+            t6 = st.checkbox("국내유통(미제조)")
+            
+        # 팩트: 선택된 6가지 탭을 제조(is_mfg)와 유통(is_dist)으로 내부 그룹화 처리
+        is_mfg = t1 or t2 or t3 or t4
+        is_dist = t5 or t6
+
+        st.markdown("### 📋 Ⅳ. 인증상황")
+        cert_df_init = pd.DataFrame([
+            {"인증명": "HACCP", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
+            {"인증명": "GMP", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
+            {"인증명": "FSSC22000", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
+            {"인증명": "ISO9001,14001", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
+            {"인증명": "기타", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""}
+        ])
+        st.data_editor(cert_df_init, hide_index=True, use_container_width=True, key="cert_editor")
+
+        st.markdown("### 🔄 Ⅴ. 변동사항")
+        col_v1, col_v2 = st.columns([1, 3])
+        with col_v1:
+            v_item = st.checkbox("거래품목 변동 여부")
+            v_type = st.checkbox("유형(법적) 변동 여부")
+            v_insp = st.checkbox("유형에 따른 검사항목 변동 여부")
+        with col_v2:
+            v_item_detail = st.text_input("거래품목 변동 내용 기재:", disabled=not v_item)
+            v_type_detail = st.text_input("유형(법적) 변동 내용 기재:", disabled=not v_type)
+            v_insp_detail = st.text_input("검사항목 변동 내용 기재:", disabled=not v_insp)
 
     # ----------------------------------------
-    # 탭 2: 개별 시트 영역
+    # 탭 2: 개별 시트 영역 (기준 텍스트 입력 기능 복구)
     # ----------------------------------------
-    mfg_files = {}
-    dist_files = {}
+    mfg_data = {}
+    dist_data = {}
     with tab2:
-        if not trade_mfg and not trade_dist:
+        if not is_mfg and not is_dist:
             st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
             
-        if trade_mfg:
-            st.markdown("### 🏭 [제조] 평가항목 전체 서류 업로드")
+        if is_mfg:
+            st.markdown("### 🏭 [제조] 평가항목 전체 서류 및 기준 입력")
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("**1. 서류관리**")
-                mfg_files["영업허가증"] = st.file_uploader("① 영업허가증/신고증", key="m1")
-                mfg_files["인증서"] = st.file_uploader("② 인증서 (HACCP, FSSC 등)", key="m2")
-                mfg_files["품목제조보고서"] = st.file_uploader("③ 품목제조보고서", key="m3")
-                mfg_files["원료수불부"] = st.file_uploader("④ 원료수불부 (최근 1개월)", key="m4")
-                mfg_files["보건증"] = st.file_uploader("⑤ 건강진단서 (보건증)", key="m5")
+                st.markdown("#### 1. 서류관리")
+                mfg_data["영업허가증"] = render_upload_block("① 영업허가증/신고증", "m1", "업체명, 소재지 등 필수 정보 일치 여부")
+                mfg_data["인증서"] = render_upload_block("② 인증서 (HACCP, FSSC 등)", "m2", "유효기간 및 인증 사항 일치 여부")
+                mfg_data["품목제조보고서"] = render_upload_block("③ 품목제조보고서", "m3", "제품명, 원료, 유통기한 일치 여부")
+                mfg_data["원료수불부"] = render_upload_block("④ 원료수불부 (최근 1개월)", "m4", "입고, 출고, 사용 기록 누락 여부")
+                mfg_data["보건증"] = render_upload_block("⑤ 건강진단서 (보건증)", "m5", "종사자 명단 및 유효기간 만료 여부")
             with col2:
-                st.markdown("**2. 환경 및 시설관리**")
-                mfg_files["위생교육"] = st.file_uploader("⑥ 위생교육 수료증", key="m6")
-                mfg_files["수질검사"] = st.file_uploader("⑦ 수질검사 성적서 (지하수 시)", key="m7")
-                mfg_files["검교정일지"] = st.file_uploader("⑧ 계측기 검교정 성적서/일지", key="m8")
-                mfg_files["방충방서"] = st.file_uploader("⑨ 방충방서 소독 일지", key="m9")
-                mfg_files["온도기록"] = st.file_uploader("⑩ 냉장/냉동 창고 온도기록지", key="m10")
+                st.markdown("#### 2. 환경 및 시설관리")
+                mfg_data["위생교육"] = render_upload_block("⑥ 위생교육 수료증", "m6", "대표자 또는 영업자 필증 보관 여부")
+                mfg_data["수질검사"] = render_upload_block("⑦ 수질검사 성적서", "m7", "먹는물 수질기준 전 항목 적합 판정 여부")
+                mfg_data["검교정일지"] = render_upload_block("⑧ 계측기 검교정 성적서/일지", "m8", "검교정 유효기간 및 오차범위 내 여부")
+                mfg_data["방충방서"] = render_upload_block("⑨ 방충방서 소독 일지", "m9", "월 정기 소독 및 점검 내역 기재 여부")
+                mfg_data["온도기록"] = render_upload_block("⑩ 냉장/냉동 창고 온도기록지", "m10", "냉장 0~10도, 냉동 -18도 이하 유지 여부")
             st.markdown("---")
 
-        if trade_dist:
-            st.markdown("### 🚚 [유통/수입] 평가항목 전체 서류 업로드")
+        if is_dist:
+            st.markdown("### 🚚 [유통/수입] 평가항목 전체 서류 및 기준 입력")
             col3, col4 = st.columns(2)
             with col3:
-                st.markdown("**1. 유통 서류관리**")
-                dist_files["수입신고필증"] = st.file_uploader("① 수입신고필증 및 COA", key="d1")
-                dist_files["제조사성적서"] = st.file_uploader("② 제조사 자가/공인 성적서", key="d2")
+                st.markdown("#### 1. 유통 서류관리")
+                dist_data["수입신고필증"] = render_upload_block("① 수입신고필증 및 COA", "d1", "수입신고 내역 및 COA 제출 여부")
+                dist_data["제조사성적서"] = render_upload_block("② 제조사 자가/공인 성적서", "d2", "제품 유형별 검사 주기 및 결과 적합 여부")
             with col4:
-                st.markdown("**2. 보관 및 출고관리**")
-                dist_files["차량타코메타"] = st.file_uploader("③ 입고/보관/차량 타코메타 기록지", key="d3")
-                dist_files["클레임일지"] = st.file_uploader("④ 부적합(클레임) 관리 대장", key="d4")
+                st.markdown("#### 2. 보관 및 출고관리")
+                dist_data["차량타코메타"] = render_upload_block("③ 입고/보관/차량 타코메타 기록지", "d3", "유통 간 적정 온도 이탈 여부 확인")
+                dist_data["클레임일지"] = render_upload_block("④ 부적합(클레임) 관리 대장", "d4", "부적합 발생 내역 및 처리(반품/폐기) 여부")
             st.markdown("---")
 
     # ----------------------------------------
@@ -189,21 +231,21 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
     mfg_coa_file, dist_coa_file = None, None
     with tab3:
-        if not trade_mfg and not trade_dist:
+        if not is_mfg and not is_dist:
             st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
             
-        if trade_mfg:
+        if is_mfg:
             st.markdown("### 🧪 [제조] 법적 기준 입력 및 성적서 대조")
             mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
             mfg_coa_file = st.file_uploader("위 표와 대조할 [자가/공인 검사 성적서] 원본 업로드", key="mdf_file")
             
-        if trade_dist:
+        if is_dist:
             st.markdown("### 🚢 [수입] COA 통관 검사 기준 입력")
             dist_df = st.data_editor(pd.DataFrame([{"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}]), num_rows="dynamic", key="ddf")
             dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file")
 
     # ==========================================
-    # 🚀 최종 통합 제출 버튼 (탭 영역 외부 하단에 단 1개만 위치)
+    # 🚀 최종 통합 제출 버튼
     # ==========================================
     st.markdown("<br><hr>", unsafe_allow_html=True)
     st.markdown("### 📤 작성 완료 후 제출")
@@ -211,25 +253,25 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     if st.button("🚀 모든 시트 작성 완료 및 최종 일괄 제출", type="primary", use_container_width=True):
         if not company_name:
             st.error("오류: [공통 시트] 탭에서 업체명을 반드시 입력해 주십시오.")
-        elif not trade_mfg and not trade_dist:
+        elif not is_mfg and not is_dist:
             st.error("오류: [공통 시트] 탭에서 거래 형태를 최소 1개 이상 선택해 주십시오.")
         else:
             tasks = []
             
-            # 1. 제조 서류 수집
-            if trade_mfg:
-                for doc_name, file_obj in mfg_files.items():
-                    if file_obj:
-                        tasks.append({"doc_name": f"[제조] {doc_name}", "criteria": f"{doc_name} 필수 정보 및 유효기간 확인", "file": file_obj})
+            # 1. 제조 서류 수집 (입력한 커스텀 심사 기준 포함)
+            if is_mfg:
+                for doc_name, data in mfg_data.items():
+                    if data["file"]:
+                        tasks.append({"doc_name": f"[제조] {doc_name}", "criteria": data["criteria"], "file": data["file"]})
                 if mfg_coa_file:
                     grid_data = mfg_df.to_dict('records')
                     tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 대조", "file": mfg_coa_file})
             
-            # 2. 유통/수입 서류 수집
-            if trade_dist:
-                for doc_name, file_obj in dist_files.items():
-                    if file_obj:
-                        tasks.append({"doc_name": f"[유통] {doc_name}", "criteria": f"{doc_name} 필수 정보 확인", "file": file_obj})
+            # 2. 유통/수입 서류 수집 (입력한 커스텀 심사 기준 포함)
+            if is_dist:
+                for doc_name, data in dist_data.items():
+                    if data["file"]:
+                        tasks.append({"doc_name": f"[유통] {doc_name}", "criteria": data["criteria"], "file": data["file"]})
                 if dist_coa_file:
                     grid_data = dist_df.to_dict('records')
                     tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "file": dist_coa_file})
