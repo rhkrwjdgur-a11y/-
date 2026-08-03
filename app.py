@@ -95,7 +95,7 @@ st.sidebar.title("시스템 메뉴")
 menu = st.sidebar.radio("접속 화면을 선택하세요", ["업체 서류 일괄 제출 (AI 검증)", "관리자 대시보드 (육안 재확인 및 수정)"])
 
 # ==========================================
-# [4] 업체 서류 일괄 제출 화면 (동적 폼 & 일괄 검증)
+# [4] 업체 서류 일괄 제출 화면
 # ==========================================
 if menu == "업체 서류 일괄 제출 (AI 검증)":
     st.title("협력업체 서류 심사 일괄 제출 시스템")
@@ -120,8 +120,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 st.error("챗봇 오류")
                 
     st.markdown("---")
+    st.info("📌 [공통 시트] → [개별 시트] → [검사내용 시트] 순서대로 입력 및 서류를 첨부하신 후, 맨 아래의 **[최종 일괄 제출]** 버튼을 단 1회만 눌러주시면 됩니다.")
     
-    # 탭 구성 (UI 표시용)
+    # 탭 영역 (입력 공간)
     tab1, tab2, tab3 = st.tabs(["[1] 공통 시트", "[2] 개별 시트", "[3] 검사내용 시트"])
 
     # ----------------------------------------
@@ -137,22 +138,21 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             biz_type = st.text_input("영업의 종류:")
             manager_email = st.text_input("담당자 이메일:")
             
-        st.markdown("#### 📌 거래 형태 (체크 시 다음 탭의 서류 목록이 자동 변환됩니다)")
+        st.markdown("#### 📌 거래 형태 (체크 시 개별 시트 서류 목록이 자동 등록됩니다)")
         trade_mfg = st.checkbox("원재료(제조), 부자재(제조), OEM, 세제류 외(제조)")
         trade_dist = st.checkbox("수입판매, 국내유통(미제조)")
 
     # ----------------------------------------
-    # 탭 2: 개별 시트 영역 (전체 목록 노출)
+    # 탭 2: 개별 시트 영역
     # ----------------------------------------
+    mfg_files = {}
+    dist_files = {}
     with tab2:
         if not trade_mfg and not trade_dist:
-            st.info("💡 [공통 시트]에서 거래 형태를 체크하시면 제출해야 할 서류 목록이 이곳에 전체적으로 노출됩니다.")
+            st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
             
-        # 팩트: 제조 관련 전체 서류 목록
-        mfg_files = {}
         if trade_mfg:
             st.markdown("### 🏭 [제조] 평가항목 전체 서류 업로드")
-            st.caption("해당되는 증빙자료를 스캔하여 슬롯별로 업로드해 주십시오.")
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("**1. 서류관리**")
@@ -170,8 +170,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 mfg_files["온도기록"] = st.file_uploader("⑩ 냉장/냉동 창고 온도기록지", key="m10")
             st.markdown("---")
 
-        # 팩트: 유통/수입 관련 전체 서류 목록
-        dist_files = {}
         if trade_dist:
             st.markdown("### 🚚 [유통/수입] 평가항목 전체 서류 업로드")
             col3, col4 = st.columns(2)
@@ -186,15 +184,14 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.markdown("---")
 
     # ----------------------------------------
-    # 탭 3: 검사내용 시트 (데이터 그리드 & 성적서)
+    # 탭 3: 검사내용 시트 영역
     # ----------------------------------------
+    mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
+    mfg_coa_file, dist_coa_file = None, None
     with tab3:
         if not trade_mfg and not trade_dist:
-            st.info("💡 [공통 시트]에서 거래 형태를 체크하시면 양식이 활성화됩니다.")
+            st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
             
-        mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
-        mfg_coa_file, dist_coa_file = None, None
-        
         if trade_mfg:
             st.markdown("### 🧪 [제조] 법적 기준 입력 및 성적서 대조")
             mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
@@ -206,21 +203,20 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file")
 
     # ==========================================
-    # 제출 트리거 (폼 하단 일괄 제출)
+    # 🚀 최종 통합 제출 버튼 (탭 영역 외부 하단에 단 1개만 위치)
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 📝 최종 제출")
+    st.markdown("<br><hr>", unsafe_allow_html=True)
+    st.markdown("### 📤 작성 완료 후 제출")
     
-    if st.button("🚀 전체 서류 일괄 제출 및 통합 AI 검증 시작", type="primary", use_container_width=True):
+    if st.button("🚀 모든 시트 작성 완료 및 최종 일괄 제출", type="primary", use_container_width=True):
         if not company_name:
-            st.error("오류: 공통 시트에 [업체명]을 반드시 입력해 주십시오.")
+            st.error("오류: [공통 시트] 탭에서 업체명을 반드시 입력해 주십시오.")
         elif not trade_mfg and not trade_dist:
-            st.error("오류: 거래 형태를 최소 1개 이상 선택해 주십시오.")
+            st.error("오류: [공통 시트] 탭에서 거래 형태를 최소 1개 이상 선택해 주십시오.")
         else:
-            # 처리할 파일들을 담을 리스트 구성
             tasks = []
             
-            # 제조 서류 취합
+            # 1. 제조 서류 수집
             if trade_mfg:
                 for doc_name, file_obj in mfg_files.items():
                     if file_obj:
@@ -229,7 +225,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     grid_data = mfg_df.to_dict('records')
                     tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 대조", "file": mfg_coa_file})
             
-            # 유통/수입 서류 취합
+            # 2. 유통/수입 서류 수집
             if trade_dist:
                 for doc_name, file_obj in dist_files.items():
                     if file_obj:
@@ -239,10 +235,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "file": dist_coa_file})
                     
             if not tasks:
-                st.warning("업로드된 서류가 하나도 없습니다. 탭을 확인하여 서류를 첨부해 주십시오.")
+                st.warning("업로드된 파일이 없습니다. [개별 시트] 또는 [검사내용 시트] 탭에서 서류를 올려주십시오.")
             else:
-                # 일괄 처리 진행바 노출
-                progress_text = "AI가 제출된 서류 전체를 분석 중입니다..."
+                progress_text = "AI가 3개 시트 전체 서류를 일괄 검증 및 구글 드라이브/시트에 저장 중입니다..."
                 my_bar = st.progress(0, text=progress_text)
                 
                 success_count = 0
@@ -252,17 +247,16 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     criteria = task["criteria"]
                     
                     try:
-                        # 1. 파일 이름 설정 및 버퍼 읽기
                         current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                         formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         unique_id = f"{company_name}_{doc_name}_{current_time_str}"
                         file_name = f"{unique_id}_{file_obj.name}"
                         file_buffer = io.BytesIO(file_obj.getvalue())
                         
-                        # 2. 구글 드라이브 업로드
+                        # 구글 드라이브 저장
                         drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
                         
-                        # 3. Gemini AI 판독 수행
+                        # AI 판독
                         prompt = f"""당신은 전문 심사관입니다.
                         [항목]: {doc_name}
                         [입력기준]: {criteria}
@@ -273,7 +267,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         
                         judgment, reason, admin_score = analyze_document_with_ai(prompt, file_obj.getvalue(), file_obj.type)
                         
-                        # 4. 구글 시트 1줄 추가
+                        # 구글 시트 저장
                         row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link]
                         append_to_google_sheet(row_data)
                         success_count += 1
@@ -281,11 +275,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     except Exception as e:
                         st.error(f"{doc_name} 처리 중 오류 발생: {e}")
                         
-                    # 진행률 업데이트
-                    my_bar.progress((idx + 1) / len(tasks), text=f"({idx+1}/{len(tasks)}) {doc_name} 검증 완료...")
+                    my_bar.progress((idx + 1) / len(tasks), text=f"({idx+1}/{len(tasks)}) {doc_name} 제출 및 검증 완료...")
                 
                 my_bar.empty()
-                st.success(f"🎉 총 {success_count}개의 서류가 구글 드라이브 저장, 시트 기록, AI 검증까지 완벽하게 일괄 완료되었습니다!")
+                st.success(f"🎉 성공! 모든 시트의 서류({success_count}건)가 구글 드라이브와 구글 시트에 일괄 등록 및 AI 검증 완료되었습니다.")
                 st.balloons()
 
 # ==========================================
