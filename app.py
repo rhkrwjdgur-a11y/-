@@ -41,7 +41,10 @@ def upload_to_google_drive(file_buffer, file_name, mime_type):
         file_metadata = {'name': file_name, 'parents': [DRIVE_FOLDER_ID]}
         media = MediaIoBaseUpload(file_buffer, mimetype=mime_type, resumable=True)
         uploaded_file = service.files().create(
-            body=file_metadata, media_body=media, fields='id, webViewLink'
+            body=file_metadata, 
+            media_body=media, 
+            fields='id, webViewLink',
+            supportsAllDrives=True  # 팩트: 공유 드라이브(Shared Drives) 업로드 허용 필수 파라미터 추가
         ).execute()
         return uploaded_file.get('webViewLink')
     except Exception as e:
@@ -144,7 +147,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             try:
                 client = get_gemini_client()
 
-                # 팩트: 곽정혁 담당자 정보로 교체 및 추가 문의 응답 지침 강화
                 sys_ctx = """
                 당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
                 아래의 '서류심사 체크리스트 작성 방법' 문서 규정을 엄격하게 적용하여 팩트만 답변하십시오.
@@ -365,6 +367,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 my_bar = st.progress(0, text=progress_text)
 
                 success_count = 0
+                pass_count = 0
+                fail_count = 0
+                
                 for idx, task in enumerate(tasks):
                     doc_name = task["doc_name"]
                     file_obj = task["file"]
@@ -395,6 +400,11 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
                         judgment, reason, admin_score = analyze_document_with_ai(prompt, file_obj.getvalue(), file_obj.type)
 
+                        if "만점" in judgment:
+                            pass_count += 1
+                        else:
+                            fail_count += 1
+
                         row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link]
                         append_to_google_sheet(row_data)
                         success_count += 1
@@ -405,7 +415,11 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     my_bar.progress((idx + 1) / len(tasks), text=f"({idx+1}/{len(tasks)}) {doc_name} 검증 완료...")
 
                 my_bar.empty()
-                st.success(f"🎉 성공! 모든 서류({success_count}건)가 설정하신 자체 관리 기준에 따라 AI 수치 검증을 마쳤으며, 구글 시트에 이탈 여부가 팩트로 기록되었습니다.")
+                total_processed = pass_count + fail_count
+                pass_rate = int((pass_count / total_processed) * 100) if total_processed > 0 else 0
+                
+                st.success(f"🎉 성공! 모든 서류({success_count}건)의 AI 수치 검증이 완료되었습니다.\n\n"
+                           f"📊 **[{company_name}] 종합 심사 결과:** 만점 {pass_count}건 / 0점 {fail_count}건 (통과율: **{pass_rate}%**)")
                 st.balloons()
 
 # ==========================================
@@ -427,6 +441,29 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
             if log_df.empty:
                 st.warning("아직 구글 시트에 기록된 심사 데이터가 없습니다.")
             else:
+                st.markdown("### 🏢 업체별 종합 심사 결과 (요약)")
+                
+                summary_data = []
+                for company in log_df['업체명'].unique():
+                    comp_df = log_df[log_df['업체명'] == company]
+                    total_docs = len(comp_df)
+                    pass_docs = comp_df['관리자최종점수'].str.contains("만점", na=False).sum()
+                    fail_docs = comp_df['관리자최종점수'].str.contains("0점", na=False).sum()
+                    comp_pass_rate = int((pass_docs / total_docs) * 100) if total_docs > 0 else 0
+                    
+                    summary_data.append({
+                        "업체명": company,
+                        "제출 서류 총합": f"{total_docs}건",
+                        "만점 (통과)": f"{pass_docs}건",
+                        "0점 (반려)": f"{fail_docs}건",
+                        "종합 통과율": f"{comp_pass_rate}%"
+                    })
+                
+                summary_df = pd.DataFrame(summary_data)
+                st.dataframe(summary_df, use_container_width=True)
+                
+                st.markdown("---")
+                
                 st.markdown("### 🚨 0점 처리 건 (수치 이탈 발견 건)")
                 zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
 
