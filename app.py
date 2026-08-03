@@ -22,7 +22,7 @@ SCOPES = [
 ]
 
 # ==========================================
-# [2] 외부 연동 함수 (드라이브 & 시트 - Secrets 연동)
+# [2] 외부 연동 함수
 # ==========================================
 def get_credentials():
     return service_account.Credentials.from_service_account_info(
@@ -69,7 +69,6 @@ def update_google_sheet_admin_score(unique_id, new_score):
         return str(e)
 
 def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
-    """Gemini 2.5 Flash를 이용해 서류를 분석하고 결과를 반환합니다."""
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     vision_model = genai.GenerativeModel('gemini-2.5-flash')
     response = vision_model.generate_content([prompt_text, {"mime_type": mime_type, "data": file_buffer}])
@@ -89,16 +88,21 @@ def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
     return judgment, reason, admin_score
 
 # ==========================================
-# [UI 헬퍼 함수] 기준 입력과 파일 업로드를 묶어서 렌더링
+# [UI 헬퍼 함수] 업체 자가 기준 입력 + 파일 업로드
 # ==========================================
-def render_upload_block(label, key_prefix, default_criteria):
+def render_upload_block(label, key_prefix, default_criteria_hint):
     st.markdown(f"**{label}**")
-    crit = st.text_input("심사 기준:", value=default_criteria, key=f"{key_prefix}_crit")
-    file = st.file_uploader("스캔본 업로드", key=f"{key_prefix}_file", label_visibility="collapsed")
+    crit = st.text_input(
+        "💡 [업체 자체 관리 기준 입력] (AI가 이 수치를 기준으로 이탈 여부를 판독합니다)", 
+        value=default_criteria_hint, 
+        key=f"{key_prefix}_crit"
+    )
+    file = st.file_uploader("스캔본 증빙자료 업로드", key=f"{key_prefix}_file", label_visibility="collapsed")
+    st.markdown("---")
     return {"criteria": crit, "file": file}
 
 # ==========================================
-# [3] 사이드바 메뉴 구성
+# [3] 사이드바 메뉴
 # ==========================================
 st.sidebar.title("시스템 메뉴")
 menu = st.sidebar.radio("접속 화면을 선택하세요", ["업체 서류 일괄 제출 (AI 검증)", "관리자 대시보드 (육안 재확인 및 수정)"])
@@ -109,7 +113,6 @@ menu = st.sidebar.radio("접속 화면을 선택하세요", ["업체 서류 일�
 if menu == "업체 서류 일괄 제출 (AI 검증)":
     st.title("협력업체 서류 심사 일괄 제출 시스템")
     
-    # 헬프데스크 챗봇
     with st.expander("💬 챗봇 헬프데스크 (제출 기준 문의)", expanded=False):
         if "messages" not in st.session_state:
             st.session_state.messages = [{"role": "assistant", "content": "제출 안내 매뉴얼에 기반하여 답변해 드립니다."}]
@@ -128,14 +131,12 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             except Exception as e:
                 st.error(f"챗봇 상세 오류: {e}")
                 
-    st.markdown("---")
-    st.info("📌 [공통 시트] → [개별 시트] → [검사내용 시트] 순서대로 입력 및 서류를 첨부하신 후, 맨 아래의 **[최종 일괄 제출]** 버튼을 단 1회만 눌러주시면 됩니다.")
+    st.info("📌 [공통 시트] → [개별 시트] → [검사내용 시트] 순서대로 입력 및 서류 첨부 후, 맨 아래 **[최종 일괄 제출]** 버튼을 누르십시오.")
     
-    # 탭 영역 (입력 공간)
     tab1, tab2, tab3 = st.tabs(["[1] 공통 시트", "[2] 개별 시트", "[3] 검사내용 시트"])
 
     # ----------------------------------------
-    # 탭 1: 공통 시트 영역 (인증상황/변동사항/6가지 거래형태 반영)
+    # 탭 1: 공통 시트
     # ----------------------------------------
     with tab1:
         st.markdown("### 🏢 Ⅲ. 업체 프로필")
@@ -159,7 +160,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             t3 = st.checkbox("OEM")
             t6 = st.checkbox("국내유통(미제조)")
             
-        # 팩트: 선택된 6가지 탭을 제조(is_mfg)와 유통(is_dist)으로 내부 그룹화 처리
         is_mfg = t1 or t2 or t3 or t4
         is_dist = t5 or t6
 
@@ -185,7 +185,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             v_insp_detail = st.text_input("검사항목 변동 내용 기재:", disabled=not v_insp)
 
     # ----------------------------------------
-    # 탭 2: 개별 시트 영역 (기준 텍스트 입력 기능 복구)
+    # 탭 2: 개별 시트 (27개 세부항목 및 기준 폼)
     # ----------------------------------------
     mfg_data = {}
     dist_data = {}
@@ -194,39 +194,52 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
             
         if is_mfg:
-            st.markdown("### 🏭 [제조] 평가항목 전체 서류 및 기준 입력")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("#### 1. 서류관리")
-                mfg_data["영업허가증"] = render_upload_block("① 영업허가증/신고증", "m1", "업체명, 소재지 등 필수 정보 일치 여부")
-                mfg_data["인증서"] = render_upload_block("② 인증서 (HACCP, FSSC 등)", "m2", "유효기간 및 인증 사항 일치 여부")
-                mfg_data["품목제조보고서"] = render_upload_block("③ 품목제조보고서", "m3", "제품명, 원료, 유통기한 일치 여부")
-                mfg_data["원료수불부"] = render_upload_block("④ 원료수불부 (최근 1개월)", "m4", "입고, 출고, 사용 기록 누락 여부")
-                mfg_data["보건증"] = render_upload_block("⑤ 건강진단서 (보건증)", "m5", "종사자 명단 및 유효기간 만료 여부")
-            with col2:
-                st.markdown("#### 2. 환경 및 시설관리")
-                mfg_data["위생교육"] = render_upload_block("⑥ 위생교육 수료증", "m6", "대표자 또는 영업자 필증 보관 여부")
-                mfg_data["수질검사"] = render_upload_block("⑦ 수질검사 성적서", "m7", "먹는물 수질기준 전 항목 적합 판정 여부")
-                mfg_data["검교정일지"] = render_upload_block("⑧ 계측기 검교정 성적서/일지", "m8", "검교정 유효기간 및 오차범위 내 여부")
-                mfg_data["방충방서"] = render_upload_block("⑨ 방충방서 소독 일지", "m9", "월 정기 소독 및 점검 내역 기재 여부")
-                mfg_data["온도기록"] = render_upload_block("⑩ 냉장/냉동 창고 온도기록지", "m10", "냉장 0~10도, 냉동 -18도 이하 유지 여부")
-            st.markdown("---")
+            st.markdown("### 🏭 [제조] 서류 심사 (업체 기준치 세부 입력)")
+            
+            with st.expander("1. 서류관리 (8개 항목)", expanded=True):
+                mfg_data["영업신고"] = render_upload_block("(1) 영업허가증/신고증", "mf1", "사업현황 및 생산제품 유형 일치 여부 확인")
+                mfg_data["인증서"] = render_upload_block("(2) 인증서 종류별 (HACCP, ISO 등)", "mf2", "인증 사항 일치 및 유효기간 만료 여부 확인")
+                mfg_data["품목제조보고"] = render_upload_block("(3) 품목제조보고서 (전 품목)", "mf3", "제품명/원료/유통기한 신고 내역 일치 여부")
+                mfg_data["원료수불부"] = render_upload_block("(4) 원료수불부", "mf4", "원료 입고/출고/사용 기록 매일 작성 및 누락 여부")
+                mfg_data["자가품질검사"] = render_upload_block("(5) 자가/공인 검사 성적서", "mf5", "주기적 실시 및 전 항목 적합 판정 여부")
+                mfg_data["건강진단"] = render_upload_block("(6) 건강진단서 (보건증)", "mf6", "종사자 전원 실시 및 유효기간 이탈 여부")
+                mfg_data["위생교육"] = render_upload_block("(7) 법정 교육 수료증", "mf7", "영업자 위생교육 이수 여부")
+                mfg_data["수질검사"] = render_upload_block("(8) 수질검사 성적서", "mf8", "용수 전 항목 적합 여부 (상수도 외 지하수 사용 시)")
+
+            with st.expander("2. 환경 및 시설관리 (9개 항목)", expanded=False):
+                mfg_data["구분구획"] = render_upload_block("(1) 작업장 평면도/설비 배치도", "mf9", "구획/구분 표시 여부 및 설비 배치 적절성")
+                mfg_data["환기/청정도"] = render_upload_block("(2) 환기시설 이력카드 및 공중낙하세균 일지", "mf10", "충분한 환기 및 세균 수치 기준 이내 여부")
+                mfg_data["조명관리"] = render_upload_block("(3) 조도관리일지", "mf11", "예: 일반 220Lux 이상, 검사 540Lux 이상 유지 여부")
+                mfg_data["청결관리"] = render_upload_block("(4) 세척/소독 기준서 및 CIP 기준서", "mf12", "작업장 및 설비 세척/소독 기준 수립 및 실시 여부")
+                mfg_data["설비_온도"] = render_upload_block("(5) 냉장/냉동 온도기록일지", "mf13", "예: 냉장 10도 이하, 냉동 -18도 이하 한계기준 이탈 여부")
+                mfg_data["설비_검교정"] = render_upload_block("(6) 검교정 계획표 및 일지", "mf14", "계측기 유효기간 이내 및 오차범위 충족 여부")
+                mfg_data["보관관리"] = render_upload_block("(7) 시설사진(MSDS) 및 제품 보관기준서", "mf15", "화학물질 별도 보관 및 원/부재료 기준 적합 보관 여부")
+                mfg_data["저수시설"] = render_upload_block("(8) 저수조 청소 필증", "mf16", "연 1회 이상 세척/소독 실시 여부")
+                mfg_data["부대시설"] = render_upload_block("(9) 화장실 시설 사진", "mf17", "손세척 및 환기 시설 구비 여부")
+
+            with st.expander("3. 방충·방서관리 (1개 항목)", expanded=False):
+                mfg_data["방충방서"] = render_upload_block("(1) 방충방서 소독 일지", "mf18", "매월 정기 소독 실시 및 기록 여부")
+
+            with st.expander("4. 공정 및 규격관리 (4개 항목)", expanded=False):
+                mfg_data["공정관리"] = render_upload_block("(1) 각 공정별 공정관리일지 (CCP 일지)", "mf19", "예: 가열 121도 15분 이상 등 업체 설정 한계기준 100% 충족 여부")
+                mfg_data["완제품관리"] = render_upload_block("(2) 완제품 검사 일지", "mf20", "규격 검사 실시 및 전 항목 적합 여부")
+                mfg_data["원부자재관리"] = render_upload_block("(3) 입고검사일지 및 협력업체 점검표", "mf21", "입고 시 기준 부합 검사 및 성적서(GMO등) 수취 여부")
+                mfg_data["클레임관리"] = render_upload_block("(4) 클레임 관리일지", "mf22", "부적합 발생 내역 및 개선조치 기록 여부")
+
+            with st.expander("5. 작업자관리 (2개 항목)", expanded=False):
+                mfg_data["개인위생"] = render_upload_block("(1) 작업장 출입절차 및 개인위생관리일지", "mf23", "위생복/장신구 등 작업자 위생 상태 양호 여부")
+                mfg_data["위생교육일지"] = render_upload_block("(2) 자체 위생교육일지", "mf24", "작업자 대상 위생교육 주기적 실시 여부")
 
         if is_dist:
-            st.markdown("### 🚚 [유통/수입] 평가항목 전체 서류 및 기준 입력")
-            col3, col4 = st.columns(2)
-            with col3:
-                st.markdown("#### 1. 유통 서류관리")
-                dist_data["수입신고필증"] = render_upload_block("① 수입신고필증 및 COA", "d1", "수입신고 내역 및 COA 제출 여부")
-                dist_data["제조사성적서"] = render_upload_block("② 제조사 자가/공인 성적서", "d2", "제품 유형별 검사 주기 및 결과 적합 여부")
-            with col4:
-                st.markdown("#### 2. 보관 및 출고관리")
-                dist_data["차량타코메타"] = render_upload_block("③ 입고/보관/차량 타코메타 기록지", "d3", "유통 간 적정 온도 이탈 여부 확인")
-                dist_data["클레임일지"] = render_upload_block("④ 부적합(클레임) 관리 대장", "d4", "부적합 발생 내역 및 처리(반품/폐기) 여부")
-            st.markdown("---")
+            st.markdown("### 🚚 [유통/수입] 평가항목 서류 및 기준 입력")
+            with st.expander("유통 서류 관리", expanded=True):
+                dist_data["수입신고필증"] = render_upload_block("(1) 수입신고필증 및 COA", "df1", "수입신고 내역 일치 및 COA 제출 여부")
+                dist_data["제조사성적서"] = render_upload_block("(2) 제조사 자가/공인 성적서", "df2", "수령 주기 확인 및 검사결과 적합 여부")
+                dist_data["차량타코메타"] = render_upload_block("(3) 차량 타코메타 기록지", "df3", "입고/보관 시 지정 온도 한계 이탈 여부 확인")
+                dist_data["클레임일지"] = render_upload_block("(4) 부적합(클레임) 관리 대장", "df4", "부적합품 식별 표시 및 반품 처리 내역 확인")
 
     # ----------------------------------------
-    # 탭 3: 검사내용 시트 영역
+    # 탭 3: 검사내용 시트
     # ----------------------------------------
     mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
     mfg_coa_file, dist_coa_file = None, None
@@ -248,9 +261,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     # 🚀 최종 통합 제출 버튼
     # ==========================================
     st.markdown("<br><hr>", unsafe_allow_html=True)
-    st.markdown("### 📤 작성 완료 후 제출")
+    st.markdown("### 📤 작성 완료 후 일괄 검증 제출")
     
-    if st.button("🚀 모든 시트 작성 완료 및 최종 일괄 제출", type="primary", use_container_width=True):
+    if st.button("🚀 모든 시트 작성 완료 및 최종 일괄 제출 (AI 심사)", type="primary", use_container_width=True):
         if not company_name:
             st.error("오류: [공통 시트] 탭에서 업체명을 반드시 입력해 주십시오.")
         elif not is_mfg and not is_dist:
@@ -258,16 +271,14 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         else:
             tasks = []
             
-            # 1. 제조 서류 수집 (입력한 커스텀 심사 기준 포함)
             if is_mfg:
                 for doc_name, data in mfg_data.items():
                     if data["file"]:
                         tasks.append({"doc_name": f"[제조] {doc_name}", "criteria": data["criteria"], "file": data["file"]})
                 if mfg_coa_file:
                     grid_data = mfg_df.to_dict('records')
-                    tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 대조", "file": mfg_coa_file})
+                    tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "file": mfg_coa_file})
             
-            # 2. 유통/수입 서류 수집 (입력한 커스텀 심사 기준 포함)
             if is_dist:
                 for doc_name, data in dist_data.items():
                     if data["file"]:
@@ -277,9 +288,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "file": dist_coa_file})
                     
             if not tasks:
-                st.warning("업로드된 파일이 없습니다. [개별 시트] 또는 [검사내용 시트] 탭에서 서류를 올려주십시오.")
+                st.warning("업로드된 파일이 없습니다. [개별 시트] 탭 등에서 심사받을 증빙자료를 첨부해 주십시오.")
             else:
-                progress_text = "AI가 3개 시트 전체 서류를 일괄 검증 및 구글 드라이브/시트에 저장 중입니다..."
+                progress_text = "AI가 등록하신 업체의 자체 관리 기준(수치)을 바탕으로 서류 기록을 엄격히 검증하고 있습니다..."
                 my_bar = st.progress(0, text=progress_text)
                 
                 success_count = 0
@@ -295,21 +306,25 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         file_name = f"{unique_id}_{file_obj.name}"
                         file_buffer = io.BytesIO(file_obj.getvalue())
                         
-                        # 구글 드라이브 저장
                         drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
                         
-                        # AI 판독
-                        prompt = f"""당신은 전문 심사관입니다.
-                        [항목]: {doc_name}
-                        [입력기준]: {criteria}
-                        지시사항: 이미지 내 수치를 확인하여 기준을 100% 충족하면 '만점 부여', 미달 시 '0점 처리'로 판정.
+                        # 팩트: AI가 '제출 유무'가 아니라 '입력된 기준치 대비 실제 수치 이탈'을 잡아내도록 프롬프트 룰 강화
+                        prompt = f"""당신은 엄격한 식품안전 품질 심사관입니다.
+                        [심사항목]: {doc_name}
+                        [업체 자체 관리 기준(반드시 지켜야 할 기준치)]: {criteria}
+                        
+                        지시사항:
+                        1. 첨부된 이미지/문서를 읽고, 기록된 온도, 시간, 룩스(Lux), 검사 수치, 날짜 등 모든 데이터를 꼼꼼히 스캔하십시오.
+                        2. 사용자가 제시한 [업체 자체 관리 기준]에 명시된 수치와 문서의 실제 기록을 완벽하게 대조하십시오.
+                        3. 단 1회라도 기준 범위를 벗어나거나(이탈), 누락되었거나, 부적합한 내용이 기록되어 있다면 무조건 '0점 처리' 하십시오.
+                        4. 모든 기록이 기준 수치를 100% 충족하고 정상일 때만 '만점 부여'로 판정하십시오.
+                        
                         출력양식:
                         판정결과: (만점 부여 또는 0점 처리)
-                        상세사유: (팩트 기재)"""
+                        상세사유: (문서에서 발견한 정확한 팩트 수치나 이탈 상태를 근거로 사유 기재)"""
                         
                         judgment, reason, admin_score = analyze_document_with_ai(prompt, file_obj.getvalue(), file_obj.type)
                         
-                        # 구글 시트 저장
                         row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link]
                         append_to_google_sheet(row_data)
                         success_count += 1
@@ -317,10 +332,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     except Exception as e:
                         st.error(f"{doc_name} 처리 중 오류 발생: {e}")
                         
-                    my_bar.progress((idx + 1) / len(tasks), text=f"({idx+1}/{len(tasks)}) {doc_name} 제출 및 검증 완료...")
+                    my_bar.progress((idx + 1) / len(tasks), text=f"({idx+1}/{len(tasks)}) {doc_name} 검증 완료...")
                 
                 my_bar.empty()
-                st.success(f"🎉 성공! 모든 시트의 서류({success_count}건)가 구글 드라이브와 구글 시트에 일괄 등록 및 AI 검증 완료되었습니다.")
+                st.success(f"🎉 성공! 모든 서류({success_count}건)가 설정하신 자체 관리 기준에 따라 AI 수치 검증을 마쳤으며, 구글 시트에 이탈 여부가 팩트로 기록되었습니다.")
                 st.balloons()
 
 # ==========================================
@@ -342,22 +357,22 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
             if log_df.empty:
                 st.warning("아직 구글 시트에 기록된 심사 데이터가 없습니다.")
             else:
-                st.markdown("### 🚨 0점 처리 건 (육안 재확인 필요)")
+                st.markdown("### 🚨 0점 처리 건 (수치 이탈 발견 건)")
                 zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
                 
                 if zero_score_df.empty:
-                    st.success("현재 육안으로 재확인해야 할 0점 처리 건이 없습니다.")
+                    st.success("현재 기준치를 이탈하여 육안으로 재확인해야 할 0점 처리 건이 없습니다.")
                 else:
                     st.dataframe(zero_score_df[['고유ID', '업체명', '심사항목', 'AI상세사유', '관리자최종점수', '드라이브링크']], use_container_width=True)
                     
                     st.markdown("---")
-                    st.markdown("### ✍️ 관리자 최종 점수 일괄 수정 (Override)")
+                    st.markdown("### ✍️ 관리자 최종 점수 일괄 수정")
                     col1, col2 = st.columns(2)
                     with col1:
                         target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", zero_score_df['고유ID'].tolist())
                     with col2:
                         new_status = st.selectbox("수정할 점수를 선택하세요:", ["만점 (관리자 육안 확인 통과)", "0점 (관리자 최종 반려)"])
-                    admin_memo = st.text_input("수정 사유 입력:")
+                    admin_memo = st.text_input("수정 사유 입력 (선택):")
                     
                     if st.button("최종 점수 구글 시트 반영"):
                         memo_text = f"{new_status} / 사유: {admin_memo}" if admin_memo else new_status
