@@ -70,8 +70,8 @@ def update_google_sheet_admin_score(unique_id, new_score):
 
 def analyze_document_with_ai(prompt_text, file_buffer, mime_type):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # 팩트: 현재 계정 환경에서 404 에러가 나지 않는 gemini-1.5-flash 모델로 변경
-    vision_model = genai.GenerativeModel('gemini-1.5-flash')
+    # 팩트: v1beta 환경에서 확실히 인식되는 gemini-1.5-flash-latest 로 변경
+    vision_model = genai.GenerativeModel('gemini-1.5-flash-latest')
     response = vision_model.generate_content([prompt_text, {"mime_type": mime_type, "data": file_buffer}])
     
     result_text = response.text
@@ -121,8 +121,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.chat_message("user").write(prompt)
             try:
                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                # 팩트: 챗봇 역시 404 에러가 나지 않는 gemini-1.5-flash 모델로 변경
-                chat_model = genai.GenerativeModel('gemini-1.5-flash')
+                # 팩트: 챗봇 모델명도 gemini-1.5-flash-latest 로 변경
+                chat_model = genai.GenerativeModel('gemini-1.5-flash-latest')
                 
                 sys_ctx = """
                 당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
