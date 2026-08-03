@@ -23,8 +23,6 @@ SCOPES = [
 ]
 
 # 사용할 Gemini 모델 (2026-08 기준 GA 모델)
-# - 서류 이미지 속 수치(온도/시간/날짜 등)를 꼼꼼히 대조해야 하므로 조금 더 추론력이 좋은 3.6-flash 사용
-# - 비용을 더 아끼고 싶으면 'gemini-3.5-flash-lite' 로 바꿔도 됩니다.
 GEMINI_MODEL_VISION = "gemini-3.6-flash"
 GEMINI_MODEL_CHAT = "gemini-3.5-flash-lite"
 
@@ -76,7 +74,6 @@ def update_google_sheet_admin_score(unique_id, new_score):
         return str(e)
 
 def get_gemini_client():
-    # 새 통합 SDK(google-genai) 클라이언트. 세션마다 새로 만들지 않도록 캐싱합니다.
     if "gemini_client" not in st.session_state:
         st.session_state.gemini_client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
     return st.session_state.gemini_client
@@ -105,13 +102,21 @@ def analyze_document_with_ai(prompt_text, file_bytes, mime_type):
     admin_score = "만점 (AI판정)" if "만점" in judgment else "0점 (재확인요망)"
     return judgment, reason, admin_score
 
-def render_upload_block(label, key_prefix, default_criteria_hint):
+def render_upload_block(label, key_prefix, default_criteria_hint, is_editable=False):
     st.markdown(f"**{label}**")
-    crit = st.text_input(
-        "💡 [업체 자체 관리 기준 입력] (AI 판독 기준치)",
-        value=default_criteria_hint,
-        key=f"{key_prefix}_crit"
-    )
+    if is_editable:
+        crit = st.text_input(
+            "💡 [업체 자체 관리 기준 입력] (귀사의 기준 수치에 맞게 수정해주십시오)",
+            value=default_criteria_hint,
+            key=f"{key_prefix}_crit"
+        )
+    else:
+        crit = st.text_input(
+            "🔒 [연세유업 고정 심사 기준] (수정 불가 - 해당 조건 충족 필수)",
+            value=default_criteria_hint,
+            key=f"{key_prefix}_crit",
+            disabled=True
+        )
     file = st.file_uploader("스캔본 증빙자료 업로드", key=f"{key_prefix}_file", label_visibility="collapsed")
     st.markdown("---")
     return {"criteria": crit, "file": file}
@@ -139,13 +144,16 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             try:
                 client = get_gemini_client()
 
+                # 팩트: 곽정혁 담당자 정보로 교체 및 추가 문의 응답 지침 강화
                 sys_ctx = """
                 당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
                 아래의 '서류심사 체크리스트 작성 방법' 문서 규정을 엄격하게 적용하여 팩트만 답변하십시오.
 
-                [기본 연락처]
-                - 담당자: 식품안전팀 박병규 (pbk0925@yonseidairy.com)
-                - 전화번호: 041-913-2121 / 010-2656-6650
+                [기본 연락처 및 문의 안내 지침]
+                - 담당자: 식품안전팀 곽정혁
+                - 이메일: rhkrwjdgur@yonseidairy.com
+                - 전화번호: 041-913-1175
+                - 중요 지침: 사용자가 "추가 문의", "연락처", "담당자", "누구에게 물어봐야 해?" 등을 질문할 경우, 즉시 곽정혁 담당자의 연락처와 이메일을 명시하여 친절히 안내하십시오.
 
                 [거래형태별 제출 시트 규정]
                 1. 원재료(제조) 및 OEM: 공통시트 + 개별시트(제조) + 검사시트 작성
@@ -156,6 +164,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 - 두 가지 이상 납품 시: 공통시트는 1회만, 개별/검사시트는 유형별로 전부 다 작성해야 합니다.
                 - 부자재(제조) 업체란: 내, 외포장재 납품업체를 의미합니다.
                 - 파일 제출 범위: '품목제조보고서'와 '자가/공인 검사 성적서'는 납품하는 전 품목을 내야 하고, 나머지 품질일지나 교육 수료증 등은 '최근 1개월 내 대표 샘플 1부'만 내면 됩니다.
+                - 부자재/세제류 업체의 서류 제외(N/A): 부자재나 세제류 생산 공정의 특성상 CCP(중요관리점) 일지나 품목제조보고서처럼 해당사항이 없는 서류는 화면에 노출되지 않으며 제출 의무가 없습니다.
                 - 대외비 서류: 배합비 등 민감한 수치는 지우고(블라인드) 제출해도 무방합니다. 단 양식과 기준은 보여야 합니다.
                 """
 
@@ -200,8 +209,20 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
         is_mfg = t1 or t2 or t3 or t4
         is_dist = t5 or t6
-
         requires_inspection_sheet = t1 or t3 or t5 or t6
+
+        if is_mfg or is_dist:
+            guide_texts = []
+            if t1 or t3:
+                guide_texts.append("✔️ **원재료 / OEM:** [개별시트] 서류, 환경, 공정 등 **제조 평가항목 27개** 작성 대상 / [검사내용시트] **작성 대상** (성적서 대조)")
+            if t2 or t4:
+                guide_texts.append("✔️ **부자재 / 세제류 외:** [개별시트] 불필요 항목(CCP, 품목제조보고)이 **자동 제외된 전용 폼** 노출 / [검사내용시트] 규정에 따라 **작성 면제**")
+            if t5:
+                guide_texts.append("✔️ **수입판매:** [개별시트] **유통/수입 평가항목 4개** 작성 대상 / [검사내용시트] **작성 대상** (COA 통관 기준)")
+            if t6:
+                guide_texts.append("✔️ **국내유통(미제조):** [개별시트] **유통/수입 평가항목 4개** 작성 대상 / [검사내용시트] **작성 대상** (성적서 대조)")
+            
+            st.info("💡 **선택하신 거래 형태별 제출 안내**\n\n" + "\n".join(guide_texts))
 
         st.markdown("### 📋 Ⅳ. 인증상황")
         cert_df_init = pd.DataFrame([
@@ -234,50 +255,56 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
 
         if is_mfg:
-            st.markdown("### 🏭 [제조] 서류 심사 (업체 기준치 세부 입력)")
+            st.markdown("### 🏭 [제조] 서류 심사 (증빙 자료 제출)")
             st.caption("※ 증빙자료 업로드 원칙: 품목제조보고서와 자가/공인 성적서는 '납품 전 품목', 나머지는 '최근 1개월 대표 샘플 1부'를 업로드합니다.")
+            st.info("💡 **부자재 / 세제류 업체 주의사항:** 귀사의 공정에 해당하지 않는 서류(예: 품목제조보고서, CCP 일지 등)는 빈칸으로 두고 파일을 첨부하지 않으시면 시스템이 자동으로 'N/A(해당사항 없음)' 처리하여 불이익 없이 심사에서 제외합니다.")
 
-            with st.expander("1. 서류관리 (8개 항목)", expanded=True):
-                mfg_data["영업신고"] = render_upload_block("(1) 영업허가증/신고증", "mf1", "사업현황 및 생산제품 유형 일치 여부 확인")
-                mfg_data["인증서"] = render_upload_block("(2) 인증서 종류별 (HACCP, ISO 등)", "mf2", "인증 사항 일치 및 유효기간 만료 여부 확인")
-                mfg_data["품목제조보고"] = render_upload_block("(3) 품목제조보고서 (납품 전 품목)", "mf3", "제품명/원료/유통기한 신고 내역 일치 여부")
-                mfg_data["원료수불부"] = render_upload_block("(4) 원료수불부", "mf4", "원료 입고/출고/사용 기록 매일 작성 및 누락 여부")
-                mfg_data["자가품질검사"] = render_upload_block("(5) 자가/공인 검사 성적서 (납품 전 품목)", "mf5", "주기적 실시 및 전 항목 적합 판정 여부")
-                mfg_data["건강진단"] = render_upload_block("(6) 건강진단서 (보건증)", "mf6", "종사자 전원 실시 및 유효기간 이탈 여부")
-                mfg_data["위생교육"] = render_upload_block("(7) 법정 교육 수료증", "mf7", "영업자 위생교육 이수 여부")
-                mfg_data["수질검사"] = render_upload_block("(8) 수질검사 성적서", "mf8", "용수 전 항목 적합 여부 (상수도 외 지하수 사용 시)")
+            with st.expander("1. 서류관리 (최대 8개 항목)", expanded=True):
+                mfg_data["영업신고"] = render_upload_block("(1) 영업허가증/신고증", "mf1", "사업현황 및 생산제품 유형 일치 여부 확인", is_editable=False)
+                mfg_data["인증서"] = render_upload_block("(2) 인증서 종류별 (HACCP, ISO 등)", "mf2", "인증 사항 일치 및 유효기간 만료 여부 확인", is_editable=False)
+                
+                if t1 or t3:
+                    mfg_data["품목제조보고"] = render_upload_block("(3) 품목제조보고서", "mf3", "제품명/원료/유통기한 신고 내역 일치 여부", is_editable=False)
+                
+                mfg_data["원료수불부"] = render_upload_block("(4) 원료수불부", "mf4", "원료 입고/출고/사용 기록 매일 작성 및 누락 여부", is_editable=False)
+                mfg_data["자가품질검사"] = render_upload_block("(5) 자가/공인 검사 성적서 (납품 전 품목)", "mf5", "주기적 실시 및 전 항목 적합 판정 여부", is_editable=False)
+                mfg_data["건강진단"] = render_upload_block("(6) 건강진단서 (보건증)", "mf6", "종사자 전원 실시 및 유효기간 이탈 여부", is_editable=False)
+                mfg_data["위생교육"] = render_upload_block("(7) 법정 교육 수료증", "mf7", "영업자 위생교육 이수 여부", is_editable=False)
+                mfg_data["수질검사"] = render_upload_block("(8) 수질검사 성적서 (지하수 사용 등 해당 업체만)", "mf8", "용수 전 항목 적합 여부", is_editable=False)
 
             with st.expander("2. 환경 및 시설관리 (9개 항목)", expanded=False):
-                mfg_data["구분구획"] = render_upload_block("(1) 작업장 평면도/설비 배치도", "mf9", "구획/구분 표시 여부 및 설비 배치 적절성")
-                mfg_data["환기/청정도"] = render_upload_block("(2) 환기시설 이력카드 및 공중낙하세균 일지", "mf10", "충분한 환기 및 세균 수치 기준 이내 여부")
-                mfg_data["조명관리"] = render_upload_block("(3) 조도관리일지", "mf11", "예: 일반 220Lux 이상, 검사 540Lux 이상 유지 여부")
-                mfg_data["청결관리"] = render_upload_block("(4) 세척/소독 기준서 및 CIP 기준서", "mf12", "작업장 및 설비 세척/소독 기준 수립 및 실시 여부")
-                mfg_data["설비_온도"] = render_upload_block("(5) 냉장/냉동 온도기록일지", "mf13", "예: 냉장 10도 이하, 냉동 -18도 이하 한계기준 이탈 여부")
-                mfg_data["설비_검교정"] = render_upload_block("(6) 검교정 계획표 및 일지", "mf14", "계측기 유효기간 이내 및 오차범위 충족 여부")
-                mfg_data["보관관리"] = render_upload_block("(7) 시설사진(MSDS) 및 제품 보관기준서", "mf15", "화학물질 별도 보관 및 원/부재료 기준 적합 보관 여부")
-                mfg_data["저수시설"] = render_upload_block("(8) 저수조 청소 필증", "mf16", "연 1회 이상 세척/소독 실시 여부")
-                mfg_data["부대시설"] = render_upload_block("(9) 화장실 시설 사진", "mf17", "손세척 및 환기 시설 구비 여부")
+                mfg_data["구분구획"] = render_upload_block("(1) 작업장 평면도/설비 배치도", "mf9", "구획/구분 표시 여부 및 설비 배치 적절성", is_editable=False)
+                mfg_data["환기/청정도"] = render_upload_block("(2) 환기시설 이력카드 및 공중낙하세균 일지", "mf10", "예: 낙하세균 30 CFU 이하 유지 여부", is_editable=True)
+                mfg_data["조명관리"] = render_upload_block("(3) 조도관리일지", "mf11", "예: 일반 220Lux 이상, 검사 540Lux 이상 유지 여부", is_editable=True)
+                mfg_data["청결관리"] = render_upload_block("(4) 세척/소독 기준서 및 CIP 기준서", "mf12", "작업장 및 설비 세척/소독 기준 수립 및 실시 여부", is_editable=False)
+                mfg_data["설비_온도"] = render_upload_block("(5) 냉장/냉동 온도기록일지", "mf13", "예: 냉장 10도 이하, 냉동 -18도 이하 한계기준 이탈 여부", is_editable=True)
+                mfg_data["설비_검교정"] = render_upload_block("(6) 검교정 계획표 및 일지", "mf14", "예: 계측기 유효기간 이내 및 오차범위 ±1도 충족 여부", is_editable=True)
+                mfg_data["보관관리"] = render_upload_block("(7) 시설사진(MSDS) 및 제품 보관기준서", "mf15", "화학물질 별도 보관 및 원/부재료 기준 적합 보관 여부", is_editable=False)
+                mfg_data["저수시설"] = render_upload_block("(8) 저수조 청소 필증", "mf16", "연 1회 이상 세척/소독 실시 여부", is_editable=False)
+                mfg_data["부대시설"] = render_upload_block("(9) 화장실 시설 사진", "mf17", "손세척 및 환기 시설 구비 여부", is_editable=False)
 
             with st.expander("3. 방충·방서관리 (1개 항목)", expanded=False):
-                mfg_data["방충방서"] = render_upload_block("(1) 방충방서 소독 일지", "mf18", "매월 정기 소독 실시 및 기록 여부")
+                mfg_data["방충방서"] = render_upload_block("(1) 방충방서 소독 일지", "mf18", "매월 정기 소독 실시 및 기록 여부", is_editable=False)
 
-            with st.expander("4. 공정 및 규격관리 (4개 항목)", expanded=False):
-                mfg_data["공정관리"] = render_upload_block("(1) 각 공정별 공정관리일지 (CCP 일지)", "mf19", "예: 가열 121도 15분 이상 등 업체 설정 한계기준 100% 충족 여부")
-                mfg_data["완제품관리"] = render_upload_block("(2) 완제품 검사 일지", "mf20", "규격 검사 실시 및 전 항목 적합 여부")
-                mfg_data["원부자재관리"] = render_upload_block("(3) 입고검사일지 및 협력업체 점검표", "mf21", "입고 시 기준 부합 검사 및 성적서(GMO등) 수취 여부")
-                mfg_data["클레임관리"] = render_upload_block("(4) 클레임 관리일지", "mf22", "부적합 발생 내역 및 개선조치 기록 여부")
+            with st.expander("4. 공정 및 규격관리 (최대 4개 항목)", expanded=False):
+                if t1 or t3:
+                    mfg_data["공정관리"] = render_upload_block("(1) 각 공정별 공정관리일지 (CCP 일지)", "mf19", "예: 가열 121도 15분 이상 등 업체 설정 한계기준 100% 충족 여부", is_editable=True)
+                
+                mfg_data["완제품관리"] = render_upload_block("(2) 완제품 검사 일지", "mf20", "규격 검사 실시 및 전 항목 적합 여부", is_editable=False)
+                mfg_data["원부자재관리"] = render_upload_block("(3) 입고검사일지 및 협력업체 점검표", "mf21", "입고 시 기준 부합 검사 및 성적서(GMO등) 수취 여부", is_editable=False)
+                mfg_data["클레임관리"] = render_upload_block("(4) 클레임 관리일지", "mf22", "부적합 발생 내역 및 개선조치 기록 여부", is_editable=False)
 
             with st.expander("5. 작업자관리 (2개 항목)", expanded=False):
-                mfg_data["개인위생"] = render_upload_block("(1) 작업장 출입절차 및 개인위생관리일지", "mf23", "위생복/장신구 등 작업자 위생 상태 양호 여부")
-                mfg_data["위생교육일지"] = render_upload_block("(2) 자체 위생교육일지", "mf24", "작업자 대상 위생교육 주기적 실시 여부")
+                mfg_data["개인위생"] = render_upload_block("(1) 작업장 출입절차 및 개인위생관리일지", "mf23", "위생복/장신구 등 작업자 위생 상태 양호 여부", is_editable=False)
+                mfg_data["위생교육일지"] = render_upload_block("(2) 자체 위생교육일지", "mf24", "작업자 대상 위생교육 주기적 실시 여부", is_editable=False)
 
         if is_dist:
             st.markdown("### 🚚 [유통/수입] 평가항목 서류 및 기준 입력")
             with st.expander("유통 서류 관리", expanded=True):
-                dist_data["수입신고필증"] = render_upload_block("(1) 수입신고필증 및 COA", "df1", "수입신고 내역 일치 및 COA 제출 여부")
-                dist_data["제조사성적서"] = render_upload_block("(2) 제조사 자가/공인 성적서 (납품 전 품목)", "df2", "수령 주기 확인 및 검사결과 적합 여부")
-                dist_data["차량타코메타"] = render_upload_block("(3) 차량 타코메타 기록지", "df3", "입고/보관 시 지정 온도 한계 이탈 여부 확인")
-                dist_data["클레임일지"] = render_upload_block("(4) 부적합(클레임) 관리 대장", "df4", "부적합품 식별 표시 및 반품 처리 내역 확인")
+                dist_data["수입신고필증"] = render_upload_block("(1) 수입신고필증 및 COA", "df1", "수입신고 내역 일치 및 COA 제출 여부", is_editable=False)
+                dist_data["제조사성적서"] = render_upload_block("(2) 제조사 자가/공인 성적서 (납품 전 품목)", "df2", "수령 주기 확인 및 검사결과 적합 여부", is_editable=False)
+                dist_data["차량타코메타"] = render_upload_block("(3) 차량 타코메타 기록지", "df3", "예: 차량 온도 10도 이하 한계 이탈 여부 확인", is_editable=True)
+                dist_data["클레임일지"] = render_upload_block("(4) 부적합(클레임) 관리 대장", "df4", "부적합품 식별 표시 및 반품 처리 내역 확인", is_editable=False)
 
     # ----------------------------------------
     # 탭 3: 검사내용 시트
