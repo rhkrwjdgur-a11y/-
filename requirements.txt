@@ -1,8 +1,7 @@
 streamlit
-google-generativeai
+google-generativeai>=0.8.0
 pandas
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 gspread
-PyPDF2
