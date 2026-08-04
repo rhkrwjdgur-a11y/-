@@ -115,11 +115,18 @@ def analyze_document_with_ai(prompt_text, file_bytes, mime_type):
 
 def render_upload_block(label, key_prefix, default_criteria_hint, is_editable=False):
     st.markdown(f"**{label}**")
+    
+    is_na = st.checkbox("해당사항 없음 (N/A)", key=f"{key_prefix}_na")
+    na_reason = ""
+    if is_na:
+        na_reason = st.text_input("해당사항 없음 사유를 입력하십시오:", key=f"{key_prefix}_na_reason")
+    
     if is_editable:
         crit = st.text_input(
             "💡 [업체 자체 관리 기준 입력] (귀사의 기준 수치에 맞게 수정해주십시오)",
             value=default_criteria_hint,
-            key=f"{key_prefix}_crit"
+            key=f"{key_prefix}_crit",
+            disabled=is_na
         )
     else:
         crit = st.text_input(
@@ -128,9 +135,9 @@ def render_upload_block(label, key_prefix, default_criteria_hint, is_editable=Fa
             key=f"{key_prefix}_crit",
             disabled=True
         )
-    file = st.file_uploader("스캔본 증빙자료 업로드", key=f"{key_prefix}_file", label_visibility="collapsed")
+    file = st.file_uploader("스캔본 증빙자료 업로드", key=f"{key_prefix}_file", label_visibility="collapsed", disabled=is_na)
     st.markdown("---")
-    return {"criteria": crit, "file": file}
+    return {"criteria": crit, "file": file, "is_na": is_na, "na_reason": na_reason}
 
 # ==========================================
 # [3] 사이드바 메뉴
@@ -199,7 +206,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         col_a, col_b = st.columns(2)
         with col_a:
             company_name = st.text_input("업체명 (필수):")
-            # 팩트: 대표자명 대신 실제 소통이 필요한 담당자명 입력란으로 변경
             manager_name = st.text_input("담당자명:")
             manager_email = st.text_input("담당자 이메일:")
         with col_b:
@@ -269,7 +275,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         if is_mfg:
             st.markdown("### 🏭 [제조] 서류 심사 (증빙 자료 제출)")
             st.caption("※ 증빙자료 업로드 원칙: 품목제조보고서와 자가/공인 성적서는 '납품 전 품목', 나머지는 '최근 1개월 대표 샘플 1부'를 업로드합니다.")
-            st.info("💡 **부자재 / 세제류 업체 주의사항:** 귀사의 공정에 해당하지 않는 서류(예: 품목제조보고서, CCP 일지 등)는 빈칸으로 두고 파일을 첨부하지 않으시면 시스템이 자동으로 'N/A(해당사항 없음)' 처리하여 불이익 없이 심사에서 제외합니다.")
 
             with st.expander("1. 서류관리 (최대 8개 항목)", expanded=True):
                 mfg_data["영업신고"] = render_upload_block("(1) 영업허가증/신고증", "mf1", "사업현황 및 생산제품 유형 일치 여부 확인", is_editable=False)
@@ -323,6 +328,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     # ----------------------------------------
     mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
     mfg_coa_file, dist_coa_file = None, None
+    mfg_coa_na, dist_coa_na = False, False
+    mfg_coa_na_reason, dist_coa_na_reason = "", ""
+    
     with tab3:
         if not is_mfg and not is_dist:
             st.info("💡 [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
@@ -332,12 +340,18 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             if t1 or t3 or t6:
                 st.markdown("### 🧪 [제조/국내유통] 법적 기준 입력 및 성적서 대조")
                 mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
-                mfg_coa_file = st.file_uploader("위 표와 대조할 [자가/공인 검사 성적서] 원본 업로드", key="mdf_file")
+                mfg_coa_na = st.checkbox("해당사항 없음 (N/A) - 검사성적서", key="mfg_coa_na")
+                if mfg_coa_na:
+                    mfg_coa_na_reason = st.text_input("검사성적서 해당사항 없음 사유:", key="mfg_coa_na_reason")
+                mfg_coa_file = st.file_uploader("위 표와 대조할 [자가/공인 검사 성적서] 원본 업로드", key="mdf_file", disabled=mfg_coa_na)
 
             if t5:
                 st.markdown("### 🚢 [수입판매] COA 통관 검사 기준 입력")
                 dist_df = st.data_editor(pd.DataFrame([{"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}]), num_rows="dynamic", key="ddf")
-                dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file")
+                dist_coa_na = st.checkbox("해당사항 없음 (N/A) - COA", key="dist_coa_na")
+                if dist_coa_na:
+                    dist_coa_na_reason = st.text_input("COA 해당사항 없음 사유:", key="dist_coa_na_reason")
+                dist_coa_file = st.file_uploader("위 표와 대조할 [수입 COA 성적서] 원본 업로드", key="ddf_file", disabled=dist_coa_na)
 
     # ==========================================
     # 🚀 최종 통합 제출 버튼
@@ -346,91 +360,170 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     st.markdown("### 📤 작성 완료 후 일괄 검증 제출")
 
     if st.button("🚀 모든 시트 작성 완료 및 최종 일괄 제출 (AI 심사)", type="primary", use_container_width=True):
+        validation_failed = False
+        
         if not company_name:
             st.error("오류: [공통 시트] 탭에서 업체명을 반드시 입력해 주십시오.")
+            validation_failed = True
         elif not is_mfg and not is_dist:
             st.error("오류: [공통 시트] 탭에서 거래 형태를 최소 1개 이상 선택해 주십시오.")
-        else:
+            validation_failed = True
+
+        if not validation_failed:
             tasks = []
+            instant_logs = []
+
+            def process_doc_submission(doc_name, data):
+                nonlocal validation_failed
+                if data["is_na"]:
+                    if not data["na_reason"]:
+                        st.error(f"오류: '{doc_name}'의 해당사항 없음 사유를 입력해 주십시오.")
+                        validation_failed = True
+                        return
+                    instant_logs.append({
+                        "doc_name": doc_name, "criteria": data["criteria"],
+                        "judgment": "N/A 처리", "reason": data["na_reason"],
+                        "admin_score": "제외 (해당사항 없음)", "file": None
+                    })
+                elif data["file"] is None:
+                    instant_logs.append({
+                        "doc_name": doc_name, "criteria": data["criteria"],
+                        "judgment": "0점 처리", "reason": "필수 파일 미제출 (누락)",
+                        "admin_score": "0점 (미제출)", "file": None
+                    })
+                else:
+                    tasks.append({"doc_name": doc_name, "criteria": data["criteria"], "file": data["file"]})
 
             if is_mfg:
-                for doc_name, data in mfg_data.items():
-                    if data["file"]:
-                        tasks.append({"doc_name": f"[제조] {doc_name}", "criteria": data["criteria"], "file": data["file"]})
+                for doc_key, data in mfg_data.items():
+                    process_doc_submission(f"[제조] {doc_key}", data)
 
-            if requires_inspection_sheet and mfg_coa_file:
-                grid_data = mfg_df.to_dict('records')
-                tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "file": mfg_coa_file})
+            if requires_inspection_sheet:
+                if t1 or t3 or t6:
+                    if mfg_coa_na:
+                        if not mfg_coa_na_reason:
+                            st.error("오류: 제조/국내유통 검사성적서의 해당사항 없음 사유를 입력해 주십시오.")
+                            validation_failed = True
+                        else:
+                            instant_logs.append({
+                                "doc_name": "[제조] 최종 검사성적서", "criteria": "N/A",
+                                "judgment": "N/A 처리", "reason": mfg_coa_na_reason,
+                                "admin_score": "제외 (해당사항 없음)", "file": None
+                            })
+                    elif mfg_coa_file is None:
+                        instant_logs.append({
+                            "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
+                            "judgment": "0점 처리", "reason": "필수 검사성적서 미제출",
+                            "admin_score": "0점 (미제출)", "file": None
+                        })
+                    else:
+                        grid_data = mfg_df.to_dict('records')
+                        tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "file": mfg_coa_file})
 
             if is_dist:
-                for doc_name, data in dist_data.items():
-                    if data["file"]:
-                        tasks.append({"doc_name": f"[유통] {doc_name}", "criteria": data["criteria"], "file": data["file"]})
-                if dist_coa_file:
+                for doc_key, data in dist_data.items():
+                    process_doc_submission(f"[유통] {doc_key}", data)
+                    
+                if dist_coa_na:
+                    if not dist_coa_na_reason:
+                        st.error("오류: 수입 COA 성적서의 해당사항 없음 사유를 입력해 주십시오.")
+                        validation_failed = True
+                    else:
+                        instant_logs.append({
+                            "doc_name": "[수입] COA 검사성적서", "criteria": "N/A",
+                            "judgment": "N/A 처리", "reason": dist_coa_na_reason,
+                            "admin_score": "제외 (해당사항 없음)", "file": None
+                        })
+                elif dist_coa_file is None:
+                    instant_logs.append({
+                        "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
+                        "judgment": "0점 처리", "reason": "필수 COA 성적서 미제출",
+                        "admin_score": "0점 (미제출)", "file": None
+                    })
+                else:
                     grid_data = dist_df.to_dict('records')
                     tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "file": dist_coa_file})
 
-            if not tasks:
-                st.warning("업로드된 파일이 없습니다. [개별 시트] 탭 등에서 심사받을 증빙자료를 첨부해 주십시오.")
-            else:
-                progress_text = "AI가 등록하신 업체의 자체 관리 기준(수치)을 바탕으로 서류 기록을 엄격히 검증하고 있습니다..."
-                my_bar = st.progress(0, text=progress_text)
+            if not validation_failed:
+                if not tasks and not instant_logs:
+                    st.warning("제출할 항목이 구성되지 않았습니다. 거래 형태를 다시 확인해 주십시오.")
+                else:
+                    progress_text = "서류 제출 및 검증이 진행 중입니다. 잠시만 기다려주십시오..."
+                    my_bar = st.progress(0, text=progress_text)
 
-                success_count = 0
-                pass_count = 0
-                fail_count = 0
-                
-                for idx, task in enumerate(tasks):
-                    doc_name = task["doc_name"]
-                    file_obj = task["file"]
-                    criteria = task["criteria"]
+                    total_expected = len(tasks) + len(instant_logs)
+                    current_idx = 0
+                    
+                    pass_count = 0
+                    fail_count = 0
+                    na_count = 0
 
-                    try:
-                        current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                        formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        unique_id = f"{company_name}_{doc_name}_{current_time_str}"
-                        file_name = f"{unique_id}_{file_obj.name}"
-                        file_buffer = io.BytesIO(file_obj.getvalue())
+                    current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                        drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
-
-                        prompt = f"""당신은 엄격한 식품안전 품질 심사관입니다.
-                        [심사항목]: {doc_name}
-                        [업체 자체 관리 기준(반드시 지켜야 할 기준치)]: {criteria}
-
-                        지시사항:
-                        1. 첨부된 이미지/문서를 읽고, 기록된 온도, 시간, 룩스(Lux), 검사 수치, 날짜 등 모든 데이터를 꼼꼼히 스캔하십시오.
-                        2. 사용자가 제시한 [업체 자체 관리 기준]에 명시된 수치와 문서의 실제 기록을 완벽하게 대조하십시오.
-                        3. 단 1회라도 기준 범위를 벗어나거나(이탈), 누락되었거나, 부적합한 내용이 기록되어 있다면 무조건 '0점 처리' 하십시오.
-                        4. 모든 기록이 기준 수치를 100% 충족하고 정상일 때만 '만점 부여'로 판정하십시오.
-
-                        출력양식:
-                        판정결과: (만점 부여 또는 0점 처리)
-                        상세사유: (문서에서 발견한 정확한 팩트 수치나 이탈 상태를 근거로 사유 기재)"""
-
-                        judgment, reason, admin_score = analyze_document_with_ai(prompt, file_obj.getvalue(), file_obj.type)
-
-                        if "만점" in judgment:
-                            pass_count += 1
+                    # 처리 1: N/A 및 미제출 즉시 구글 시트 등록
+                    for log in instant_logs:
+                        current_idx += 1
+                        unique_id = f"{company_name}_{log['doc_name']}_{current_time_str}"
+                        
+                        if "N/A" in log["judgment"]:
+                            na_count += 1
                         else:
                             fail_count += 1
-
-                        # 팩트: 변경된 담당자명(manager_name)을 포함하여 시트에 데이터 저장
-                        row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link, manager_name, manager_email, biz_type, delivered_items]
+                        
+                        row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], "첨부파일 없음", manager_name, manager_email, biz_type, delivered_items]
                         append_to_google_sheet(row_data)
-                        success_count += 1
+                        my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 처리 중...")
 
-                    except Exception as e:
-                        st.error(f"{doc_name} 처리 중 오류 발생: {e}")
+                    # 처리 2: 업로드된 파일 AI 검증 및 구글 시트 등록
+                    for task in tasks:
+                        current_idx += 1
+                        doc_name = task["doc_name"]
+                        file_obj = task["file"]
+                        criteria = task["criteria"]
 
-                    my_bar.progress((idx + 1) / len(tasks), text=f"({idx+1}/{len(tasks)}) {doc_name} 검증 완료...")
+                        try:
+                            unique_id = f"{company_name}_{doc_name}_{current_time_str}"
+                            file_name = f"{unique_id}_{file_obj.name}"
+                            file_buffer = io.BytesIO(file_obj.getvalue())
 
-                my_bar.empty()
-                total_processed = pass_count + fail_count
-                comp_score = int((pass_count / total_processed) * 100) if total_processed > 0 else 0
-                
-                st.success(f"🎉 성공! 모든 서류({success_count}건)의 AI 수치 검증이 완료되었습니다.\n\n"
-                           f"📊 **[{company_name}] 종합 심사 결과:** 총점 {comp_score}점 (만점 {pass_count}건 / 미비 {fail_count}건)")
+                            drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
+                            prompt = f"""당신은 엄격한 식품안전 품질 심사관입니다.
+                            [심사항목]: {doc_name}
+                            [업체 자체 관리 기준(반드시 지켜야 할 기준치)]: {criteria}
+
+                            지시사항:
+                            1. 첨부된 이미지/문서를 읽고, 기록된 모든 데이터를 꼼꼼히 스캔하십시오.
+                            2. 사용자가 제시한 [업체 자체 관리 기준]에 명시된 수치와 문서의 실제 기록을 완벽하게 대조하십시오.
+                            3. 단 1회라도 기준 범위를 벗어나거나(이탈), 누락되었거나, 부적합한 내용이 기록되어 있다면 무조건 '0점 처리' 하십시오.
+                            4. 모든 기록이 기준 수치를 100% 충족하고 정상일 때만 '만점 부여'로 판정하십시오.
+
+                            출력양식:
+                            판정결과: (만점 부여 또는 0점 처리)
+                            상세사유: (문서에서 발견한 정확한 팩트 수치나 이탈 상태를 근거로 사유 기재)"""
+
+                            judgment, reason, admin_score = analyze_document_with_ai(prompt, file_obj.getvalue(), file_obj.type)
+
+                            if "만점" in judgment:
+                                pass_count += 1
+                            else:
+                                fail_count += 1
+
+                            row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link, manager_name, manager_email, biz_type, delivered_items]
+                            append_to_google_sheet(row_data)
+
+                        except Exception as e:
+                            st.error(f"{doc_name} 검증 중 오류 발생: {e}")
+
+                        my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {doc_name} 검증 완료...")
+
+                    my_bar.empty()
+                    
+                    total_evaluated = pass_count + fail_count
+                    comp_score = int((pass_count / total_evaluated) * 100) if total_evaluated > 0 else 0
+                    
+                    st.success(f"🎉 성공! 모든 서류에 대한 자동 검증(N/A 확인 및 미제출 패널티 포함)이 완료되었습니다.\n\n"
+                               f"📊 **[{company_name}] 종합 심사 결과:** 환산 총점 **{comp_score}점** (통과 {pass_count}건 / 미비 및 누락 {fail_count}건 / 평가 면제 {na_count}건)")
 
 # ==========================================
 # [5] 관리자 대시보드
@@ -454,9 +547,11 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 company_scores = {}
                 for company in log_df['업체명'].unique():
                     comp_df = log_df[log_df['업체명'] == company]
-                    total_docs = len(comp_df)
                     pass_docs = comp_df['관리자최종점수'].str.contains("만점", na=False).sum()
-                    score = int((pass_docs / total_docs) * 100) if total_docs > 0 else 0
+                    fail_docs = comp_df['관리자최종점수'].str.contains("0점", na=False).sum()
+                    
+                    total_evaluated = pass_docs + fail_docs
+                    score = int((pass_docs / total_evaluated) * 100) if total_evaluated > 0 else 0
 
                     if score >= 85: grade = "승인"
                     elif score >= 70: grade = "지도"
@@ -503,57 +598,49 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 st.markdown("### 📋 업체별 평가 결과 상세")
                 st.dataframe(pd.DataFrame(bottom_table_data), hide_index=True, use_container_width=True)
                 
-                st.markdown("---")
-                
-                st.markdown("### 🔍 업체별 상세 평가 리포트 (연락처 및 미비 서류 피드백용)")
-                st.caption("아래에서 피드백할 업체를 선택하면 해당 업체의 담당자 정보와 0점 처리된 사유가 요약 출력됩니다.")
-                
-                selected_company = st.selectbox("피드백 대상 업체를 선택하십시오:", log_df['업체명'].unique())
-
-                if selected_company:
-                    comp_df = log_df[log_df['업체명'] == selected_company]
-                    total_docs = len(comp_df)
-                    pass_docs = comp_df['관리자최종점수'].str.contains("만점", na=False).sum()
-                    comp_score = int((pass_docs / total_docs) * 100) if total_docs > 0 else 0
-                    
-                    contact_email = comp_df['담당자이메일'].iloc[-1] if '담당자이메일' in comp_df.columns and pd.notna(comp_df['담당자이메일'].iloc[-1]) and str(comp_df['담당자이메일'].iloc[-1]).strip() != "" else "기록 없음"
-                    # 팩트: 대표자명 대신 저장된 담당자명을 불러오도록 수정
+                # 팩트: 선택한 업체의 담당자 정보를 즉시 노출하는 기능 추가
+                st.markdown("#### 👤 업체별 담당자 정보 확인")
+                selected_info_company = st.selectbox("담당자 정보를 확인할 업체를 선택하십시오:", ["선택하세요"] + list(log_df['업체명'].unique()))
+                if selected_info_company != "선택하세요":
+                    comp_df = log_df[log_df['업체명'] == selected_info_company]
                     contact_manager = comp_df['담당자명'].iloc[-1] if '담당자명' in comp_df.columns and pd.notna(comp_df['담당자명'].iloc[-1]) and str(comp_df['담당자명'].iloc[-1]).strip() != "" else "기록 없음"
-
-                    st.info(f"**[{selected_company}] 종합 평가 점수:** 💯 {comp_score}점 / 100점 만점\n\n"
-                            f"👨‍💼 **담당자:** {contact_manager} | 📧 **담당자 이메일:** {contact_email}")
-
-                    failed_df = comp_df[comp_df['관리자최종점수'].str.contains("0점", na=False)]
-                    
-                    if failed_df.empty:
-                        st.success("✅ 제출된 서류가 모두 만점 처리되어 누락 및 미비 사항이 없습니다.")
-                    else:
-                        st.error(f"🚨 **미비 및 0점 처리 항목 (총 {len(failed_df)}건)**: 업체에 아래 사유로 보완을 요청하십시오.")
-                        for idx, row in failed_df.iterrows():
-                            item_name = row.get('심사항목', '항목명 확인 불가')
-                            ai_reason = row.get('AI상세사유', '상세 사유 기록 없음')
-                            st.markdown(f"- **{item_name}**  \n  └ *사유:* {ai_reason}")
-
+                    contact_email = comp_df['담당자이메일'].iloc[-1] if '담당자이메일' in comp_df.columns and pd.notna(comp_df['담당자이메일'].iloc[-1]) and str(comp_df['담당자이메일'].iloc[-1]).strip() != "" else "기록 없음"
+                    st.info(f"👨‍💼 **담당자명:** {contact_manager} | 📧 **이메일:** {contact_email}")
+                
                 st.markdown("---")
 
-                st.markdown("### ✍️ 관리자 최종 점수 일괄 수정")
+                # 팩트: 0점 처리 사유 확인 및 드라이브 링크 직접 연결 기능 고도화
+                st.markdown("### ✍️ 관리자 최종 점수 일괄 수정 (미비 서류 검토)")
                 zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
                 
                 if zero_score_df.empty:
-                    st.success("육안으로 재확인하여 점수를 수정할 0점 건이 없습니다.")
+                    st.success("육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
                 else:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", zero_score_df['고유ID'].tolist())
-                    with col2:
-                        new_status = st.selectbox("수정할 점수를 선택하세요:", ["만점 (관리자 육안 확인 통과)", "0점 (관리자 최종 반려)"])
-                    admin_memo = st.text_input("수정 사유 입력 (선택):")
+                    target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", ["선택하세요"] + zero_score_df['고유ID'].tolist())
+                    
+                    if target_id != "선택하세요":
+                        target_row = zero_score_df[zero_score_df['고유ID'] == target_id].iloc[0]
+                        drive_url = target_row.get('드라이브링크', '#')
+                        
+                        st.error(f"🚨 **0점 처리 사유:** {target_row.get('AI상세사유', '사유 없음')}")
+                        
+                        if drive_url != "첨부파일 없음":
+                            st.markdown(f"📂 **[제출된 파일 직접 확인하기 (클릭 시 새 창 열림)]({drive_url})**")
+                        else:
+                            st.warning("⚠️ 미제출로 인해 첨부된 파일이 없습니다.")
+                        
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            new_status = st.selectbox("수정할 점수를 선택하세요:", ["만점 (관리자 육안 확인 통과)", "0점 (관리자 최종 반려)"])
+                        with col2:
+                            admin_memo = st.text_input("수정 사유 입력 (선택):")
 
-                    if st.button("최종 점수 구글 시트 반영"):
-                        memo_text = f"{new_status} / 사유: {admin_memo}" if admin_memo else new_status
-                        if update_google_sheet_admin_score(target_id, memo_text) == True:
-                            st.success(f"{target_id} 건의 최종 점수가 성공적으로 수정되었습니다.")
-                            st.rerun()
+                        if st.button("최종 점수 구글 시트 반영"):
+                            memo_text = f"{new_status} / 사유: {admin_memo}" if admin_memo else new_status
+                            if update_google_sheet_admin_score(target_id, memo_text) == True:
+                                st.success(f"{target_id} 건의 최종 점수가 성공적으로 수정되었습니다.")
+                                st.rerun()
 
                 st.markdown("---")
                 st.markdown("### 📊 실시간 전체 심사 이력 (구글 시트 연동)")
