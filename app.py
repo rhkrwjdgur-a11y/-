@@ -5,8 +5,6 @@ import pandas as pd
 import datetime
 import os
 import io
-
-# 팩트: 기존 service_account 대신 OAuth2.0용 Credentials를 불러옵니다.
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
@@ -24,7 +22,6 @@ SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets'
 ]
 
-# 사용할 Gemini 모델 (2026-08 기준 GA 모델)
 GEMINI_MODEL_VISION = "gemini-3.6-flash"
 GEMINI_MODEL_CHAT = "gemini-3.5-flash-lite"
 
@@ -32,10 +29,6 @@ GEMINI_MODEL_CHAT = "gemini-3.5-flash-lite"
 # [2] 외부 연동 함수
 # ==========================================
 def get_credentials():
-    """
-    팩트: 기존 gcp_service_account를 폐기하고, 
-    새로 등록한 OAuth 2.0 (Refresh Token) 방식으로 구글 권한을 얻어오는 함수로 완전히 교체되었습니다.
-    """
     try:
         creds = Credentials(
             token=None,
@@ -59,7 +52,7 @@ def upload_to_google_drive(file_buffer, file_name, mime_type):
             body=file_metadata, 
             media_body=media, 
             fields='id, webViewLink',
-            supportsAllDrives=True  # 팩트: 공유 드라이브(Shared Drives) 업로드 허용 필수 파라미터 유지
+            supportsAllDrives=True
         ).execute()
         return uploaded_file.get('webViewLink')
     except Exception as e:
@@ -206,10 +199,12 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         col_a, col_b = st.columns(2)
         with col_a:
             company_name = st.text_input("업체명 (필수):")
-            ceo_name = st.text_input("대표자:")
-        with col_b:
-            biz_type = st.text_input("영업의 종류:")
+            # 팩트: 대표자명 대신 실제 소통이 필요한 담당자명 입력란으로 변경
+            manager_name = st.text_input("담당자명:")
             manager_email = st.text_input("담당자 이메일:")
+        with col_b:
+            biz_type = st.text_input("영업의 종류 (보고서 '구분' 란에 표기됨):")
+            delivered_items = st.text_input("납품 품목 (예: 우유팩, 탈지분유 등):")
 
         st.markdown("### 📌 Ⅱ. 거래 형태 (복수선택 가능)")
         st.caption("주의: 2가지 이상 납품 시 모두 체크하셔야 해당 폼이 활성화됩니다.")
@@ -420,7 +415,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         else:
                             fail_count += 1
 
-                        row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link]
+                        # 팩트: 변경된 담당자명(manager_name)을 포함하여 시트에 데이터 저장
+                        row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link, manager_name, manager_email, biz_type, delivered_items]
                         append_to_google_sheet(row_data)
                         success_count += 1
 
@@ -431,11 +427,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
                 my_bar.empty()
                 total_processed = pass_count + fail_count
-                pass_rate = int((pass_count / total_processed) * 100) if total_processed > 0 else 0
+                comp_score = int((pass_count / total_processed) * 100) if total_processed > 0 else 0
                 
                 st.success(f"🎉 성공! 모든 서류({success_count}건)의 AI 수치 검증이 완료되었습니다.\n\n"
-                           f"📊 **[{company_name}] 종합 심사 결과:** 만점 {pass_count}건 / 0점 {fail_count}건 (통과율: **{pass_rate}%**)")
-                st.balloons()
+                           f"📊 **[{company_name}] 종합 심사 결과:** 총점 {comp_score}점 (만점 {pass_count}건 / 미비 {fail_count}건)")
 
 # ==========================================
 # [5] 관리자 대시보드
@@ -456,39 +451,97 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
             if log_df.empty:
                 st.warning("아직 구글 시트에 기록된 심사 데이터가 없습니다.")
             else:
-                st.markdown("### 🏢 업체별 종합 심사 결과 (요약)")
-                
-                summary_data = []
+                company_scores = {}
                 for company in log_df['업체명'].unique():
                     comp_df = log_df[log_df['업체명'] == company]
                     total_docs = len(comp_df)
                     pass_docs = comp_df['관리자최종점수'].str.contains("만점", na=False).sum()
-                    fail_docs = comp_df['관리자최종점수'].str.contains("0점", na=False).sum()
-                    comp_pass_rate = int((pass_docs / total_docs) * 100) if total_docs > 0 else 0
-                    
-                    summary_data.append({
-                        "업체명": company,
-                        "제출 서류 총합": f"{total_docs}건",
-                        "만점 (통과)": f"{pass_docs}건",
-                        "0점 (반려)": f"{fail_docs}건",
-                        "종합 통과율": f"{comp_pass_rate}%"
-                    })
+                    score = int((pass_docs / total_docs) * 100) if total_docs > 0 else 0
+
+                    if score >= 85: grade = "승인"
+                    elif score >= 70: grade = "지도"
+                    else: grade = "등급 외"
+
+                    biz_type_val = comp_df['영업의종류'].iloc[-1] if '영업의종류' in comp_df.columns else ""
+                    item_val = comp_df['납품품목'].iloc[-1] if '납품품목' in comp_df.columns else ""
+
+                    company_scores[company] = {
+                        "score": score,
+                        "grade": grade,
+                        "biz_type": biz_type_val,
+                        "item": item_val
+                    }
+
+                grade_counts = {"승인": 0, "지도": 0, "등급 외": 0}
+                for data in company_scores.values():
+                    grade_counts[data["grade"]] += 1
+
+                top_table_data = [
+                    {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승인"], "조 치": "승 인"},
+                    {"등 급": "지 도", "점 수": "70 ~ 84점", "업 체 수": grade_counts["지도"], "조 치": "업체별 개선사항 피드백"},
+                    {"등 급": "등급 외", "점 수": "70점미만, 미제출", "업 체 수": grade_counts["등급 외"], "조 치": "복수거래, 거래중지 등 검토"},
+                    {"등 급": "합 계", "점 수": "", "업 체 수": sum(grade_counts.values()), "조 치": "-"}
+                ]
                 
-                summary_df = pd.DataFrame(summary_data)
-                st.dataframe(summary_df, use_container_width=True)
+                st.markdown("### 📊 품질안전부문 실무 평가 보고 (요약)")
+                st.dataframe(pd.DataFrame(top_table_data), hide_index=True, use_container_width=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                bottom_table_data = []
+                for idx, (company, data) in enumerate(company_scores.items(), 1):
+                    bottom_table_data.append({
+                        "NO": idx,
+                        "구분": data["biz_type"],
+                        "업체명": company,
+                        "품목": data["item"],
+                        "점수": data["score"],
+                        "결과": data["grade"],
+                        "비고": ""
+                    })
+
+                st.markdown("### 📋 업체별 평가 결과 상세")
+                st.dataframe(pd.DataFrame(bottom_table_data), hide_index=True, use_container_width=True)
                 
                 st.markdown("---")
                 
-                st.markdown("### 🚨 0점 처리 건 (수치 이탈 발견 건)")
+                st.markdown("### 🔍 업체별 상세 평가 리포트 (연락처 및 미비 서류 피드백용)")
+                st.caption("아래에서 피드백할 업체를 선택하면 해당 업체의 담당자 정보와 0점 처리된 사유가 요약 출력됩니다.")
+                
+                selected_company = st.selectbox("피드백 대상 업체를 선택하십시오:", log_df['업체명'].unique())
+
+                if selected_company:
+                    comp_df = log_df[log_df['업체명'] == selected_company]
+                    total_docs = len(comp_df)
+                    pass_docs = comp_df['관리자최종점수'].str.contains("만점", na=False).sum()
+                    comp_score = int((pass_docs / total_docs) * 100) if total_docs > 0 else 0
+                    
+                    contact_email = comp_df['담당자이메일'].iloc[-1] if '담당자이메일' in comp_df.columns and pd.notna(comp_df['담당자이메일'].iloc[-1]) and str(comp_df['담당자이메일'].iloc[-1]).strip() != "" else "기록 없음"
+                    # 팩트: 대표자명 대신 저장된 담당자명을 불러오도록 수정
+                    contact_manager = comp_df['담당자명'].iloc[-1] if '담당자명' in comp_df.columns and pd.notna(comp_df['담당자명'].iloc[-1]) and str(comp_df['담당자명'].iloc[-1]).strip() != "" else "기록 없음"
+
+                    st.info(f"**[{selected_company}] 종합 평가 점수:** 💯 {comp_score}점 / 100점 만점\n\n"
+                            f"👨‍💼 **담당자:** {contact_manager} | 📧 **담당자 이메일:** {contact_email}")
+
+                    failed_df = comp_df[comp_df['관리자최종점수'].str.contains("0점", na=False)]
+                    
+                    if failed_df.empty:
+                        st.success("✅ 제출된 서류가 모두 만점 처리되어 누락 및 미비 사항이 없습니다.")
+                    else:
+                        st.error(f"🚨 **미비 및 0점 처리 항목 (총 {len(failed_df)}건)**: 업체에 아래 사유로 보완을 요청하십시오.")
+                        for idx, row in failed_df.iterrows():
+                            item_name = row.get('심사항목', '항목명 확인 불가')
+                            ai_reason = row.get('AI상세사유', '상세 사유 기록 없음')
+                            st.markdown(f"- **{item_name}**  \n  └ *사유:* {ai_reason}")
+
+                st.markdown("---")
+
+                st.markdown("### ✍️ 관리자 최종 점수 일괄 수정")
                 zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
-
+                
                 if zero_score_df.empty:
-                    st.success("현재 기준치를 이탈하여 육안으로 재확인해야 할 0점 처리 건이 없습니다.")
+                    st.success("육안으로 재확인하여 점수를 수정할 0점 건이 없습니다.")
                 else:
-                    st.dataframe(zero_score_df[['고유ID', '업체명', '심사항목', 'AI상세사유', '관리자최종점수', '드라이브링크']], use_container_width=True)
-
-                    st.markdown("---")
-                    st.markdown("### ✍️ 관리자 최종 점수 일괄 수정")
                     col1, col2 = st.columns(2)
                     with col1:
                         target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", zero_score_df['고유ID'].tolist())
@@ -504,7 +557,13 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
 
                 st.markdown("---")
                 st.markdown("### 📊 실시간 전체 심사 이력 (구글 시트 연동)")
-                st.dataframe(log_df, use_container_width=True)
+                st.dataframe(
+                    log_df, 
+                    use_container_width=True,
+                    column_config={
+                        "드라이브링크": st.column_config.LinkColumn("드라이브링크")
+                    }
+                )
         except Exception as e:
             st.error(f"데이터베이스 연결 오류: {e}")
     elif admin_pw != "":
