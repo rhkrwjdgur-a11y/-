@@ -5,7 +5,9 @@ import pandas as pd
 import datetime
 import os
 import io
-from google.oauth2 import service_account
+
+# 팩트: 기존 service_account 대신 OAuth2.0용 Credentials를 불러옵니다.
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import gspread
@@ -30,9 +32,22 @@ GEMINI_MODEL_CHAT = "gemini-3.5-flash-lite"
 # [2] 외부 연동 함수
 # ==========================================
 def get_credentials():
-    return service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"], scopes=SCOPES
-    )
+    """
+    팩트: 기존 gcp_service_account를 폐기하고, 
+    새로 등록한 OAuth 2.0 (Refresh Token) 방식으로 구글 권한을 얻어오는 함수로 완전히 교체되었습니다.
+    """
+    try:
+        creds = Credentials(
+            token=None,
+            refresh_token=st.secrets["google_oauth"]["refresh_token"],
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=st.secrets["google_oauth"]["client_id"],
+            client_secret=st.secrets["google_oauth"]["client_secret"]
+        )
+        return creds
+    except Exception as e:
+        st.error(f"🚨 구글 인증 정보 로드 오류: {e}")
+        return None
 
 def upload_to_google_drive(file_buffer, file_name, mime_type):
     try:
@@ -44,7 +59,7 @@ def upload_to_google_drive(file_buffer, file_name, mime_type):
             body=file_metadata, 
             media_body=media, 
             fields='id, webViewLink',
-            supportsAllDrives=True  # 팩트: 공유 드라이브(Shared Drives) 업로드 허용 필수 파라미터 추가
+            supportsAllDrives=True  # 팩트: 공유 드라이브(Shared Drives) 업로드 허용 필수 파라미터 유지
         ).execute()
         return uploaded_file.get('webViewLink')
     except Exception as e:
@@ -429,7 +444,7 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
     st.title("품질 관리 책임자 최종 검증 대시보드")
     admin_pw = st.text_input("관리자 비밀번호:", type="password")
 
-    if admin_pw == "admin1234":
+    if admin_pw == "2082":
         try:
             creds = get_credentials()
             gc = gspread.authorize(creds)
