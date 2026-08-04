@@ -243,14 +243,34 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.info("💡 **선택하신 거래 형태별 제출 안내**\n\n" + "\n".join(guide_texts))
 
         st.markdown("### 📋 Ⅳ. 인증상황")
+        # 팩트: 날짜 형식 인식 오류 방지를 위해 초기값을 None으로 설정
         cert_df_init = pd.DataFrame([
-            {"인증명": "HACCP", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
-            {"인증명": "GMP", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
-            {"인증명": "FSSC22000", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
-            {"인증명": "ISO9001,14001", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""},
-            {"인증명": "기타", "법적필수(O,X)": "", "인증대상": "", "최초인증일": "", "비고": ""}
+            {"인증명": "HACCP", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None},
+            {"인증명": "GMP", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None},
+            {"인증명": "FSSC22000", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None},
+            {"인증명": "ISO9001,14001", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None},
+            {"인증명": "기타", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None}
         ])
-        st.data_editor(cert_df_init, hide_index=True, use_container_width=True, key="cert_editor")
+        
+        # 팩트: O, X 선택 리스트 및 달력 팝업 기능을 컬럼 설정(column_config)을 통해 완벽 구현
+        st.data_editor(
+            cert_df_init, 
+            hide_index=True, 
+            use_container_width=True, 
+            key="cert_editor",
+            column_config={
+                "인증명": st.column_config.TextColumn("인증명", disabled=True),
+                "법적필수(O,X)": st.column_config.SelectboxColumn(
+                    "법적필수(O,X)",
+                    options=["O", "X"],
+                    required=False
+                ),
+                "최초인증일": st.column_config.DateColumn(
+                    "최초인증일",
+                    format="YYYY-MM-DD"
+                )
+            }
+        )
 
         st.markdown("### 🔄 Ⅴ. 변동사항")
         col_v1, col_v2 = st.columns([1, 3])
@@ -373,7 +393,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             tasks = []
             instant_logs = []
 
-            # 팩트: 논로컬(nonlocal) 변수를 사용하지 않고 반환값으로 검증 상태 처리
             def process_doc_submission(doc_name, data):
                 if data["is_na"]:
                     if not data["na_reason"]:
@@ -488,15 +507,21 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                             file_buffer = io.BytesIO(file_obj.getvalue())
 
                             drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
+                            
                             prompt = f"""당신은 엄격한 식품안전 품질 심사관입니다.
+                            [평가 대상 업체 정보]
+                            - 신고된 영업의 종류: {biz_type}
+                            - 납품 예정 품목: {delivered_items}
+
                             [심사항목]: {doc_name}
                             [업체 자체 관리 기준(반드시 지켜야 할 기준치)]: {criteria}
 
                             지시사항:
                             1. 첨부된 이미지/문서를 읽고, 기록된 모든 데이터를 꼼꼼히 스캔하십시오.
-                            2. 사용자가 제시한 [업체 자체 관리 기준]에 명시된 수치와 문서의 실제 기록을 완벽하게 대조하십시오.
-                            3. 단 1회라도 기준 범위를 벗어나거나(이탈), 누락되었거나, 부적합한 내용이 기록되어 있다면 무조건 '0점 처리' 하십시오.
-                            4. 모든 기록이 기준 수치를 100% 충족하고 정상일 때만 '만점 부여'로 판정하십시오.
+                            2. [특별 지시] 심사항목이 '영업허가증/신고증' 또는 '품목제조보고서'일 경우, 제출된 서류상에 적힌 '업종(영업의 종류)'이 신고된 [{biz_type}]과 정확히 일치하는지 반드시 확인하십시오. (예: 식품제조가공업을 제출해야 하는데 축산물가공업 허가증을 제출한 경우 등 일치하지 않으면 즉시 0점 처리). 또한 문서의 내용이 [{delivered_items}]와 관련이 있는지 교차 검증하십시오.
+                            3. 사용자가 제시한 [업체 자체 관리 기준]에 명시된 수치와 문서의 실제 기록을 완벽하게 대조하십시오.
+                            4. 단 1회라도 기준 범위를 벗어나거나(이탈), 누락되었거나, 부적합한 내용이 기록되어 있다면 무조건 '0점 처리' 하십시오.
+                            5. 모든 기록이 기준 수치를 100% 충족하고 정상일 때만 '만점 부여'로 판정하십시오.
 
                             출력양식:
                             판정결과: (만점 부여 또는 0점 처리)
@@ -572,7 +597,7 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     grade_counts[data["grade"]] += 1
 
                 top_table_data = [
-                    {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승인"], "조 치": "승 인"},
+                    {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승인"], "조 조치": "승 인"},
                     {"등 급": "지 도", "점 수": "70 ~ 84점", "업 체 수": grade_counts["지도"], "조 치": "업체별 개선사항 피드백"},
                     {"등 급": "등급 외", "점 수": "70점미만, 미제출", "업 체 수": grade_counts["등급 외"], "조 치": "복수거래, 거래중지 등 검토"},
                     {"등 급": "합 계", "점 수": "", "업 체 수": sum(grade_counts.values()), "조 치": "-"}
@@ -598,21 +623,32 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 st.markdown("### 📋 업체별 평가 결과 상세")
                 st.dataframe(pd.DataFrame(bottom_table_data), hide_index=True, use_container_width=True)
                 
-                st.markdown("#### 👤 업체별 담당자 정보 확인")
-                selected_info_company = st.selectbox("담당자 정보를 확인할 업체를 선택하십시오:", ["선택하세요"] + list(log_df['업체명'].unique()))
-                if selected_info_company != "선택하세요":
+                st.markdown("---")
+                
+                st.markdown("#### 👤 업체별 상세 조회 및 담당자 정보 확인")
+                selected_info_company = st.selectbox("조회할 업체를 선택하십시오 (선택 시 하단 목록이 해당 업체 기준으로 필터링됩니다):", ["전체 보기"] + list(log_df['업체명'].unique()))
+                
+                if selected_info_company != "전체 보기":
                     comp_df = log_df[log_df['업체명'] == selected_info_company]
                     contact_manager = comp_df['담당자명'].iloc[-1] if '담당자명' in comp_df.columns and pd.notna(comp_df['담당자명'].iloc[-1]) and str(comp_df['담당자명'].iloc[-1]).strip() != "" else "기록 없음"
                     contact_email = comp_df['담당자이메일'].iloc[-1] if '담당자이메일' in comp_df.columns and pd.notna(comp_df['담당자이메일'].iloc[-1]) and str(comp_df['담당자이메일'].iloc[-1]).strip() != "" else "기록 없음"
-                    st.info(f"👨‍💼 **담당자명:** {contact_manager} | 📧 **이메일:** {contact_email}")
+                    st.info(f"👨‍💼 **[{selected_info_company}] 담당자명:** {contact_manager} | 📧 **이메일:** {contact_email}")
+                    
+                    display_df = comp_df
+                    zero_score_df = comp_df[comp_df['관리자최종점수'].str.contains("0점", na=False)]
+                else:
+                    display_df = log_df
+                    zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
                 
                 st.markdown("---")
 
                 st.markdown("### ✍️ 관리자 최종 점수 일괄 수정 (미비 서류 검토)")
-                zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
                 
                 if zero_score_df.empty:
-                    st.success("육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
+                    if selected_info_company != "전체 보기":
+                        st.success(f"✅ [{selected_info_company}] 업체는 육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
+                    else:
+                        st.success("✅ 전체 업체 중 육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
                 else:
                     target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", ["선택하세요"] + zero_score_df['고유ID'].tolist())
                     
@@ -641,9 +677,14 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                                 st.rerun()
 
                 st.markdown("---")
-                st.markdown("### 📊 실시간 전체 심사 이력 (구글 시트 연동)")
+                
+                if selected_info_company != "전체 보기":
+                    st.markdown(f"### 📊 [{selected_info_company}] 전체 심사 이력 (만점/미비/면제 포함)")
+                else:
+                    st.markdown("### 📊 실시간 전체 심사 이력 (구글 시트 연동)")
+                    
                 st.dataframe(
-                    log_df, 
+                    display_df, 
                     use_container_width=True,
                     column_config={
                         "드라이브링크": st.column_config.LinkColumn("드라이브링크")
