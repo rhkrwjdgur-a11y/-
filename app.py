@@ -373,13 +373,12 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             tasks = []
             instant_logs = []
 
+            # 팩트: 논로컬(nonlocal) 변수를 사용하지 않고 반환값으로 검증 상태 처리
             def process_doc_submission(doc_name, data):
-                nonlocal validation_failed
                 if data["is_na"]:
                     if not data["na_reason"]:
                         st.error(f"오류: '{doc_name}'의 해당사항 없음 사유를 입력해 주십시오.")
-                        validation_failed = True
-                        return
+                        return False
                     instant_logs.append({
                         "doc_name": doc_name, "criteria": data["criteria"],
                         "judgment": "N/A 처리", "reason": data["na_reason"],
@@ -393,10 +392,12 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     })
                 else:
                     tasks.append({"doc_name": doc_name, "criteria": data["criteria"], "file": data["file"]})
+                return True
 
             if is_mfg:
                 for doc_key, data in mfg_data.items():
-                    process_doc_submission(f"[제조] {doc_key}", data)
+                    if not process_doc_submission(f"[제조] {doc_key}", data):
+                        validation_failed = True
 
             if requires_inspection_sheet:
                 if t1 or t3 or t6:
@@ -422,7 +423,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
             if is_dist:
                 for doc_key, data in dist_data.items():
-                    process_doc_submission(f"[유통] {doc_key}", data)
+                    if not process_doc_submission(f"[유통] {doc_key}", data):
+                        validation_failed = True
                     
                 if dist_coa_na:
                     if not dist_coa_na_reason:
@@ -461,7 +463,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                     formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                    # 처리 1: N/A 및 미제출 즉시 구글 시트 등록
                     for log in instant_logs:
                         current_idx += 1
                         unique_id = f"{company_name}_{log['doc_name']}_{current_time_str}"
@@ -475,7 +476,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         append_to_google_sheet(row_data)
                         my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 처리 중...")
 
-                    # 처리 2: 업로드된 파일 AI 검증 및 구글 시트 등록
                     for task in tasks:
                         current_idx += 1
                         doc_name = task["doc_name"]
@@ -598,7 +598,6 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 st.markdown("### 📋 업체별 평가 결과 상세")
                 st.dataframe(pd.DataFrame(bottom_table_data), hide_index=True, use_container_width=True)
                 
-                # 팩트: 선택한 업체의 담당자 정보를 즉시 노출하는 기능 추가
                 st.markdown("#### 👤 업체별 담당자 정보 확인")
                 selected_info_company = st.selectbox("담당자 정보를 확인할 업체를 선택하십시오:", ["선택하세요"] + list(log_df['업체명'].unique()))
                 if selected_info_company != "선택하세요":
@@ -609,7 +608,6 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 
                 st.markdown("---")
 
-                # 팩트: 0점 처리 사유 확인 및 드라이브 링크 직접 연결 기능 고도화
                 st.markdown("### ✍️ 관리자 최종 점수 일괄 수정 (미비 서류 검토)")
                 zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
                 
