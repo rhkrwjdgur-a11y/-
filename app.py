@@ -243,7 +243,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             st.info("💡 **선택하신 거래 형태별 제출 안내**\n\n" + "\n".join(guide_texts))
 
         st.markdown("### 📋 Ⅳ. 인증상황")
-        # 팩트: 날짜 형식 인식 오류 방지를 위해 초기값을 None으로 설정
+        st.caption("💡 표의 빈칸을 **더블클릭**하여 내용을 선택하거나 입력하십시오.")
         cert_df_init = pd.DataFrame([
             {"인증명": "HACCP", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None},
             {"인증명": "GMP", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None},
@@ -252,8 +252,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             {"인증명": "기타", "법적필수(O,X)": None, "인증대상": None, "최초인증일": None, "비고": None}
         ])
         
-        # 팩트: O, X 선택 리스트 및 달력 팝업 기능을 컬럼 설정(column_config)을 통해 완벽 구현
-        st.data_editor(
+        cert_df = st.data_editor(
             cert_df_init, 
             hide_index=True, 
             use_container_width=True, 
@@ -273,6 +272,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         )
 
         st.markdown("### 🔄 Ⅴ. 변동사항")
+        st.caption("💡 변동사항이 있을 시 체크하여 상세 내용을 기재해 주십시오.")
         col_v1, col_v2 = st.columns([1, 3])
         with col_v1:
             v_item = st.checkbox("거래품목 변동 여부")
@@ -390,6 +390,18 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             validation_failed = True
 
         if not validation_failed:
+            cert_summary_list = []
+            for idx, row in cert_df.iterrows():
+                if pd.notna(row['법적필수(O,X)']) or pd.notna(row['인증대상']) or pd.notna(row['최초인증일']):
+                    cert_summary_list.append(f"[{row['인증명']}] 필수:{row['법적필수(O,X)']}, 대상:{row['인증대상']}, 인증일:{row['최초인증일']}, 비고:{row['비고']}")
+            cert_str = "\n".join(cert_summary_list) if cert_summary_list else "입력된 인증 내역 없음"
+
+            changes_summary = []
+            if v_item: changes_summary.append(f"거래품목 변동: {v_item_detail}")
+            if v_type: changes_summary.append(f"유형 변동: {v_type_detail}")
+            if v_insp: changes_summary.append(f"검사항목 변동: {v_insp_detail}")
+            changes_str = " / ".join(changes_summary) if changes_summary else "해당사항 없음"
+
             tasks = []
             instant_logs = []
 
@@ -491,7 +503,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         else:
                             fail_count += 1
                         
-                        row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], "첨부파일 없음", manager_name, manager_email, biz_type, delivered_items]
+                        row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], "첨부파일 없음", manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
                         append_to_google_sheet(row_data)
                         my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 처리 중...")
 
@@ -534,7 +546,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                             else:
                                 fail_count += 1
 
-                            row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link, manager_name, manager_email, biz_type, delivered_items]
+                            row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
                             append_to_google_sheet(row_data)
 
                         except Exception as e:
@@ -569,127 +581,168 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
             if log_df.empty:
                 st.warning("아직 구글 시트에 기록된 심사 데이터가 없습니다.")
             else:
-                company_scores = {}
-                for company in log_df['업체명'].unique():
-                    comp_df = log_df[log_df['업체명'] == company]
-                    pass_docs = comp_df['관리자최종점수'].str.contains("만점", na=False).sum()
-                    fail_docs = comp_df['관리자최종점수'].str.contains("0점", na=False).sum()
-                    
-                    total_evaluated = pass_docs + fail_docs
-                    score = int((pass_docs / total_evaluated) * 100) if total_evaluated > 0 else 0
-
-                    if score >= 85: grade = "승인"
-                    elif score >= 70: grade = "지도"
-                    else: grade = "등급 외"
-
-                    biz_type_val = comp_df['영업의종류'].iloc[-1] if '영업의종류' in comp_df.columns else ""
-                    item_val = comp_df['납품품목'].iloc[-1] if '납품품목' in comp_df.columns else ""
-
-                    company_scores[company] = {
-                        "score": score,
-                        "grade": grade,
-                        "biz_type": biz_type_val,
-                        "item": item_val
-                    }
-
-                grade_counts = {"승인": 0, "지도": 0, "등급 외": 0}
-                for data in company_scores.values():
-                    grade_counts[data["grade"]] += 1
-
-                top_table_data = [
-                    {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승인"], "조 조치": "승 인"},
-                    {"등 급": "지 도", "점 수": "70 ~ 84점", "업 체 수": grade_counts["지도"], "조 치": "업체별 개선사항 피드백"},
-                    {"등 급": "등급 외", "점 수": "70점미만, 미제출", "업 체 수": grade_counts["등급 외"], "조 치": "복수거래, 거래중지 등 검토"},
-                    {"등 급": "합 계", "점 수": "", "업 체 수": sum(grade_counts.values()), "조 치": "-"}
-                ]
+                # 팩트: 날짜 필터링 기능 적용을 위해 시간 열을 변환
+                time_col = log_df.columns[1]
+                log_df[time_col] = pd.to_datetime(log_df[time_col], errors='coerce')
                 
-                st.markdown("### 📊 품질안전부문 실무 평가 보고 (요약)")
-                st.dataframe(pd.DataFrame(top_table_data), hide_index=True, use_container_width=True)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                bottom_table_data = []
-                for idx, (company, data) in enumerate(company_scores.items(), 1):
-                    bottom_table_data.append({
-                        "NO": idx,
-                        "구분": data["biz_type"],
-                        "업체명": company,
-                        "품목": data["item"],
-                        "점수": data["score"],
-                        "결과": data["grade"],
-                        "비고": ""
-                    })
-
-                st.markdown("### 📋 업체별 평가 결과 상세")
-                st.dataframe(pd.DataFrame(bottom_table_data), hide_index=True, use_container_width=True)
-                
-                st.markdown("---")
-                
-                st.markdown("#### 👤 업체별 상세 조회 및 담당자 정보 확인")
-                selected_info_company = st.selectbox("조회할 업체를 선택하십시오 (선택 시 하단 목록이 해당 업체 기준으로 필터링됩니다):", ["전체 보기"] + list(log_df['업체명'].unique()))
-                
-                if selected_info_company != "전체 보기":
-                    comp_df = log_df[log_df['업체명'] == selected_info_company]
-                    contact_manager = comp_df['담당자명'].iloc[-1] if '담당자명' in comp_df.columns and pd.notna(comp_df['담당자명'].iloc[-1]) and str(comp_df['담당자명'].iloc[-1]).strip() != "" else "기록 없음"
-                    contact_email = comp_df['담당자이메일'].iloc[-1] if '담당자이메일' in comp_df.columns and pd.notna(comp_df['담당자이메일'].iloc[-1]) and str(comp_df['담당자이메일'].iloc[-1]).strip() != "" else "기록 없음"
-                    st.info(f"👨‍💼 **[{selected_info_company}] 담당자명:** {contact_manager} | 📧 **이메일:** {contact_email}")
-                    
-                    display_df = comp_df
-                    zero_score_df = comp_df[comp_df['관리자최종점수'].str.contains("0점", na=False)]
+                valid_dates = log_df[log_df[time_col].notnull()]
+                if not valid_dates.empty:
+                    min_date = valid_dates[time_col].min().date()
+                    max_date = valid_dates[time_col].max().date()
                 else:
-                    display_df = log_df
-                    zero_score_df = log_df[log_df['관리자최종점수'].str.contains("0점", na=False)]
-                
-                st.markdown("---")
+                    min_date = datetime.date.today()
+                    max_date = datetime.date.today()
 
-                st.markdown("### ✍️ 관리자 최종 점수 일괄 수정 (미비 서류 검토)")
+                st.markdown("### 📅 심사 기간 필터링")
+                date_range = st.date_input("조회할 심사 기간을 선택하십시오:", value=(min_date, max_date), min_value=min_date, max_value=max_date)
                 
-                if zero_score_df.empty:
+                if len(date_range) == 2:
+                    start_date, end_date = date_range
+                    mask = (log_df[time_col].dt.date >= start_date) & (log_df[time_col].dt.date <= end_date)
+                    filtered_df = log_df.loc[mask]
+                else:
+                    filtered_df = log_df
+
+                if filtered_df.empty:
+                    st.warning("해당 기간에 접수된 심사 데이터가 없습니다.")
+                else:
+                    company_scores = {}
+                    for company in filtered_df['업체명'].unique():
+                        comp_df = filtered_df[filtered_df['업체명'] == company]
+                        pass_docs = comp_df['관리자최종점수'].str.contains("만점", na=False).sum()
+                        fail_docs = comp_df['관리자최종점수'].str.contains("0점", na=False).sum()
+                        
+                        total_evaluated = pass_docs + fail_docs
+                        score = int((pass_docs / total_evaluated) * 100) if total_evaluated > 0 else 0
+
+                        if score >= 85: grade = "승인"
+                        elif score >= 70: grade = "지도"
+                        else: grade = "등급 외"
+
+                        biz_type_val = comp_df['영업의종류'].iloc[-1] if '영업의종류' in comp_df.columns else ""
+                        item_val = comp_df['납품품목'].iloc[-1] if '납품품목' in comp_df.columns else ""
+
+                        company_scores[company] = {
+                            "score": score,
+                            "grade": grade,
+                            "biz_type": biz_type_val,
+                            "item": item_val
+                        }
+
+                    grade_counts = {"승인": 0, "지도": 0, "등급 외": 0}
+                    for data in company_scores.values():
+                        grade_counts[data["grade"]] += 1
+
+                    top_table_data = [
+                        {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승인"], "조 치": "승 인"},
+                        {"등 급": "지 도", "점 수": "70 ~ 84점", "업 체 수": grade_counts["지도"], "조 치": "업체별 개선사항 피드백"},
+                        {"등 급": "등급 외", "점 수": "70점미만, 미제출", "업 체 수": grade_counts["등급 외"], "조 치": "복수거래, 거래중지 등 검토"},
+                        {"등 급": "합 계", "점 수": "", "업 체 수": sum(grade_counts.values()), "조 치": "-"}
+                    ]
+                    
+                    st.markdown("### 📊 품질안전부문 실무 평가 보고 (요약)")
+                    st.dataframe(pd.DataFrame(top_table_data), hide_index=True, use_container_width=True)
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    bottom_table_data = []
+                    for idx, (company, data) in enumerate(company_scores.items(), 1):
+                        bottom_table_data.append({
+                            "NO": idx,
+                            "구분": data["biz_type"],
+                            "업체명": company,
+                            "품목": data["item"],
+                            "점수": data["score"],
+                            "결과": data["grade"],
+                            "비고": ""
+                        })
+
+                    st.markdown("### 📋 업체별 평가 결과 상세")
+                    st.dataframe(pd.DataFrame(bottom_table_data), hide_index=True, use_container_width=True)
+                    
+                    # 팩트: 엑셀 다운로드 기능 구현
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        summary_excel_df = pd.DataFrame(top_table_data)
+                        summary_excel_df.to_excel(writer, sheet_name='서류점검결과', index=False, startrow=0)
+                        
+                        detail_excel_df = pd.DataFrame(bottom_table_data)
+                        detail_excel_df.to_excel(writer, sheet_name='서류점검결과', index=False, startrow=len(summary_excel_df) + 3)
+                        
+                    st.download_button(
+                        label="📥 현재 필터링된 결과 보고서 엑셀 다운로드",
+                        data=output.getvalue(),
+                        file_name=f"협력업체_서류점검_결과_{datetime.date.today().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+                    st.markdown("---")
+                    
+                    st.markdown("#### 👤 업체별 상세 조회 및 담당자 정보 확인")
+                    selected_info_company = st.selectbox("조회할 업체를 선택하십시오 (선택 시 하단 목록이 해당 업체 기준으로 필터링됩니다):", ["전체 보기"] + list(filtered_df['업체명'].unique()))
+                    
                     if selected_info_company != "전체 보기":
-                        st.success(f"✅ [{selected_info_company}] 업체는 육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
+                        comp_df = filtered_df[filtered_df['업체명'] == selected_info_company]
+                        contact_manager = comp_df['담당자명'].iloc[-1] if '담당자명' in comp_df.columns and pd.notna(comp_df['담당자명'].iloc[-1]) and str(comp_df['담당자명'].iloc[-1]).strip() != "" else "기록 없음"
+                        contact_email = comp_df['담당자이메일'].iloc[-1] if '담당자이메일' in comp_df.columns and pd.notna(comp_df['담당자이메일'].iloc[-1]) and str(comp_df['담당자이메일'].iloc[-1]).strip() != "" else "기록 없음"
+                        st.info(f"👨‍💼 **[{selected_info_company}] 담당자명:** {contact_manager} | 📧 **이메일:** {contact_email}")
+                        
+                        display_df = comp_df
+                        zero_score_df = comp_df[comp_df['관리자최종점수'].str.contains("0점", na=False)]
                     else:
-                        st.success("✅ 전체 업체 중 육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
-                else:
-                    target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", ["선택하세요"] + zero_score_df['고유ID'].tolist())
+                        display_df = filtered_df
+                        zero_score_df = filtered_df[filtered_df['관리자최종점수'].str.contains("0점", na=False)]
                     
-                    if target_id != "선택하세요":
-                        target_row = zero_score_df[zero_score_df['고유ID'] == target_id].iloc[0]
-                        drive_url = target_row.get('드라이브링크', '#')
-                        
-                        st.error(f"🚨 **0점 처리 사유:** {target_row.get('AI상세사유', '사유 없음')}")
-                        
-                        if drive_url != "첨부파일 없음":
-                            st.markdown(f"📂 **[제출된 파일 직접 확인하기 (클릭 시 새 창 열림)]({drive_url})**")
+                    st.markdown("---")
+
+                    st.markdown("### ✍️ 관리자 최종 점수 일괄 수정 (미비 서류 검토)")
+                    
+                    if zero_score_df.empty:
+                        if selected_info_company != "전체 보기":
+                            st.success(f"✅ [{selected_info_company}] 업체는 육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
                         else:
-                            st.warning("⚠️ 미제출로 인해 첨부된 파일이 없습니다.")
+                            st.success("✅ 필터링된 기간 내 전체 업체 중 육안으로 재확인하여 점수를 수정할 0점 처리 건이 없습니다.")
+                    else:
+                        target_id = st.selectbox("수정할 건의 [고유ID]를 선택하세요:", ["선택하세요"] + zero_score_df['고유ID'].tolist())
                         
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            new_status = st.selectbox("수정할 점수를 선택하세요:", ["만점 (관리자 육안 확인 통과)", "0점 (관리자 최종 반려)"])
-                        with col2:
-                            admin_memo = st.text_input("수정 사유 입력 (선택):")
+                        if target_id != "선택하세요":
+                            target_row = zero_score_df[zero_score_df['고유ID'] == target_id].iloc[0]
+                            drive_url = target_row.get('드라이브링크', '#')
+                            
+                            st.error(f"🚨 **0점 처리 사유:** {target_row.get('AI상세사유', '사유 없음')}")
+                            
+                            if drive_url != "첨부파일 없음":
+                                st.markdown(f"📂 **[제출된 파일 직접 확인하기 (클릭 시 새 창 열림)]({drive_url})**")
+                            else:
+                                st.warning("⚠️ 미제출로 인해 첨부된 파일이 없습니다.")
+                            
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                new_status = st.selectbox("수정할 점수를 선택하세요:", ["만점 (관리자 육안 확인 통과)", "0점 (관리자 최종 반려)"])
+                            with col2:
+                                admin_memo = st.text_input("수정 사유 입력 (선택):")
 
-                        if st.button("최종 점수 구글 시트 반영"):
-                            memo_text = f"{new_status} / 사유: {admin_memo}" if admin_memo else new_status
-                            if update_google_sheet_admin_score(target_id, memo_text) == True:
-                                st.success(f"{target_id} 건의 최종 점수가 성공적으로 수정되었습니다.")
-                                st.rerun()
+                            if st.button("최종 점수 구글 시트 반영"):
+                                memo_text = f"{new_status} / 사유: {admin_memo}" if admin_memo else new_status
+                                if update_google_sheet_admin_score(target_id, memo_text) == True:
+                                    st.success(f"{target_id} 건의 최종 점수가 성공적으로 수정되었습니다.")
+                                    st.rerun()
 
-                st.markdown("---")
-                
-                if selected_info_company != "전체 보기":
-                    st.markdown(f"### 📊 [{selected_info_company}] 전체 심사 이력 (만점/미비/면제 포함)")
-                else:
-                    st.markdown("### 📊 실시간 전체 심사 이력 (구글 시트 연동)")
+                    st.markdown("---")
                     
-                st.dataframe(
-                    display_df, 
-                    use_container_width=True,
-                    column_config={
-                        "드라이브링크": st.column_config.LinkColumn("드라이브링크")
-                    }
-                )
+                    if selected_info_company != "전체 보기":
+                        st.markdown(f"### 📊 [{selected_info_company}] 전체 심사 이력 (만점/미비/면제 포함)")
+                    else:
+                        st.markdown("### 📊 실시간 전체 심사 이력 (필터링됨)")
+                        
+                    st.dataframe(
+                        display_df, 
+                        use_container_width=True,
+                        column_config={
+                            "드라이브링크": st.column_config.LinkColumn("드라이브링크")
+                        }
+                    )
         except Exception as e:
             st.error(f"데이터베이스 연결 오류: {e}")
     elif admin_pw != "":
