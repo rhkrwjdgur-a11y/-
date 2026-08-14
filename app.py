@@ -1117,6 +1117,8 @@ elif menu == "관리자 업체관리 (메일 발송)":
                                 success, msg = send_email(recipient, mail_subject_bulk, mail_body_bulk.replace('\n', '<br>'))
                                 if success:
                                     success_count += 1
+                                else:
+                                    st.error(f"[발송 실패 진단] {recipient} : {msg}")
                                 mail_bar.progress((i + 1) / len(email_list), text=f"{recipient} 발송 중...")
                                 
                             mail_bar.empty()
@@ -1169,7 +1171,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
                                     if success:
                                         st.success(f"{target_comp_mail} 담당자({target_email})에게 메일 발송을 완료했습니다.")
                                     else:
-                                        st.error(f"메일 발송 실패: {msg}")
+                                        st.error(f"[발송 실패 진단] {target_email} : {msg}")
 
         except Exception as e:
             st.error(f"[오류] 데이터베이스 연결 실패: {e}")
