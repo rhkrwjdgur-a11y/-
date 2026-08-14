@@ -295,9 +295,10 @@ menu = st.sidebar.radio("접속 화면을 선택하세요", [
 if menu == "업체 서류 일괄 제출 (AI 검증)":
     st.title("협력업체 서류 심사 일괄 제출 시스템")
 
-    with st.expander("[안내] 서류 제출 기준 및 지침 문의", expanded=False):
+    with st.expander("🤖 [안내] 서류 제출 기준 및 지침 문의 챗봇 (클릭하여 질문하기)", expanded=False):
+        st.info("💡 24시간 언제든 서류 제출 기준을 팩트로 답변해 드립니다.")
         if "messages" not in st.session_state:
-            st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다."}]
+            st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다. 궁금하신 내용을 질문해 주십시오."}]
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).write(msg["content"])
         if prompt := st.chat_input("질문을 입력하세요..."):
@@ -308,12 +309,29 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
                 sys_ctx = """
                 당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
-                아래의 '서류심사 체크리스트 작성 방법' 문서 규정을 엄격하게 적용하여 팩트만 답변하십시오.
+                당신의 임무는 협력업체 담당자의 질문에 직접, 구체적이고, 팩트 기반으로 답변하는 것입니다. 
+                절대 "담당자에게 이메일로 문의하라"고 회피하지 말고, 아래의 시스템 규정을 바탕으로 직접 안내하십시오.
+
+                [시스템 제출 규정 및 가이드라인]
+                1. 거래 형태별 작성 대상:
+                   - 원재료(제조) / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 전체 작성 대상이며, [검사내용시트] 작성 대상입니다(성적서 수치 대조).
+                   - 부자재(제조) / 세제류 외(제조): [개별시트] 불필요 항목이 자동 제외된 폼만 작성하며, [검사내용시트] 작성은 규정에 따라 면제됩니다.
+                   - 수입판매: [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다(COA 통관 기준).
+                   - 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다.
+                2. 증빙 자료 업로드 원칙:
+                   - 항목별로 1개 이상의 필수 파일을 업로드해야 합니다. 다중 파일 업로드가 가능합니다.
+                   - '1개만 있어도 만점'이라고 명시된 항목은 여러 서류 중 하나만 제출해도 인정됩니다.
+                   - 해당사항이 없는 경우 '해당사항 없음(N/A)'을 체크하고 반드시 타당한 사유를 텍스트로 입력해야 합니다. 사유가 부실하면 관리자 검토 시 반려 처리됩니다.
+                3. 검사내용 시트 작성법:
+                   - 업로드할 '자가/공인 검사 성적서' 또는 '수입 COA' 원본을 보고, 주요 검사항목, 법적/통관 기준, 실제 검사 결과값을 표에 직접 입력해야 합니다.
+                   - 입력한 데이터는 첨부된 성적서 파일과 AI가 정밀하게 대조합니다.
+                4. 시스템 이용 순서:
+                   - [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후, 맨 아래 '모든 시트 작성 완료 및 최종 일괄 제출' 버튼을 클릭해야 완료됩니다.
 
                 [기본 연락처 및 문의 안내 지침]
                 - 담당자: 식품안전팀 곽정혁
                 - 이메일: rhkrwjdgur@yonseidairy.com
-                - 전화번호: 041-913-1175
+                - 전화번호 안내는 절대 하지 마십시오. 시스템 오류 등 AI가 도저히 해결할 수 없는 중대한 문제에 한해서만 이메일 문의를 안내하십시오.
                 """
 
                 resp = client.models.generate_content(
@@ -855,20 +873,31 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 submitted_list = [c for c in all_targets if c in submitted_set]
                 pending_list = [c for c in all_targets if c not in submitted_set]
                 
-                col_a, col_b, col_c = st.columns(3)
+                col_a, col_b, col_c, col_d = st.columns(4)
+                progress_rate = int((len(submitted_list) / len(all_targets)) * 100) if len(all_targets) > 0 else 0
+                
                 col_a.metric("전체 심사 대상 업체", f"{len(all_targets)}개")
                 col_b.metric("제출 완료 업체", f"{len(submitted_list)}개")
                 col_c.metric("미제출 대기 업체", f"{len(pending_list)}개")
+                col_d.metric("제출 진행률", f"{progress_rate}%")
+                
+                st.progress(progress_rate / 100)
                 
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
-                    with st.expander("제출 완료 업체 세부 목록"):
-                        for comp in submitted_list:
-                            st.write(comp)
+                    with st.expander("제출 완료 업체 세부 목록", expanded=True):
+                        with st.container(height=200):
+                            if not submitted_list:
+                                st.write("해당 없음")
+                            for comp in submitted_list:
+                                st.write(comp)
                 with col_s2:
-                    with st.expander("미제출 대기 업체 세부 목록"):
-                        for comp in pending_list:
-                            st.write(comp)
+                    with st.expander("미제출 대기 업체 세부 목록", expanded=True):
+                        with st.container(height=200):
+                            if not pending_list:
+                                st.write("해당 없음")
+                            for comp in pending_list:
+                                st.write(comp)
                 
                 extra_submitted = [c for c in submitted_set if c not in all_targets]
                 if extra_submitted:
