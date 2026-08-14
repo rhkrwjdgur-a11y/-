@@ -249,11 +249,12 @@ def is_passed(row):
     return False
 
 def send_email(to_email, subject, body):
+    available_keys = list(st.secrets.keys())
     sender_email = st.secrets.get("SMTP_EMAIL", "")
     app_pw = st.secrets.get("SMTP_PASSWORD", "")
     
     if not sender_email or not app_pw:
-        return False, "[오류] 시스템(st.secrets)에 SMTP_EMAIL 또는 SMTP_PASSWORD가 설정되지 않아 메일을 발송할 수 없습니다."
+        return False, f"[오류] SMTP_EMAIL 또는 SMTP_PASSWORD가 설정되지 않았습니다. (현재 인식된 키 목록: {available_keys})"
         
     try:
         msg = MIMEMultipart()
@@ -423,49 +424,49 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             if t1 or t3:
                 exp1_prefixes.insert(2, "mf3")
             with st.expander(f"1. 서류관리 [총 {len(exp1_prefixes)}개 항목 / {get_completed_count(exp1_prefixes)}개 완료]", expanded=True):
-                mfg_data["[제조] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "mf1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 3점)", "mf2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 사항 일치 및 유효기간 만료 여부", is_editable=False)
+                mfg_data["[제조] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "mf1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)")
+                mfg_data["[제조] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 3점)", "mf2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 사항 일치 및 유효기간 만료 여부")
                 if t1 or t3:
-                    mfg_data["[제조] (3) 품목제조보고"] = render_upload_block("(3) 품목제조보고 (배점 5점)", "mf3", "제출 서류: 품목제조보고서 / 기준: 제품명, 원료, 유통기한 일치 여부", is_editable=False)
-                mfg_data["[제조] (4) 원료수불부"] = render_upload_block("(4) 원료수불부 (배점 5점)", "mf4", "제출 서류: 원료수불부 / 기준: 매일 작성 및 누락 여부 확인", is_editable=False)
-                mfg_data["[제조] (5) 자가품질검사"] = render_upload_block("(5) 자가품질검사 (배점 5점)", "mf5", "제출 서류: 자가/공인 검사 성적서 / 기준: 전 항목 적합 판정 여부", is_editable=False)
-                mfg_data["[제조] (6) 건강진단"] = render_upload_block("(6) 건강진단 (배점 5점)", "mf6", "제출 서류: 보건증 / 기준: 1년 1개월 이내 검증 및 유효기간 확인", is_editable=False)
-                mfg_data["[제조] (7) 위생교육"] = render_upload_block("(7) 위생교육 (배점 5점)", "mf7", "제출 서류: 법정 위생교육 수료증 / 기준: 해당 제조업에 맞는 교육 이수 여부", is_editable=False)
-                mfg_data["[제조] (8) 수질검사"] = render_upload_block("(8) 수질검사 (배점 5점)", "mf8", "제출 서류: 상수도 성적서 또는 지하수 성적서 / 기준: 지하수 반년 이내 검사 확인 (1개만 있어도 만점)", is_editable=False)
+                    mfg_data["[제조] (3) 품목제조보고"] = render_upload_block("(3) 품목제조보고 (배점 5점)", "mf3", "제출 서류: 품목제조보고서 / 기준: 제품명, 원료, 유통기한 일치 여부")
+                mfg_data["[제조] (4) 원료수불부"] = render_upload_block("(4) 원료수불부 (배점 5점)", "mf4", "제출 서류: 원료수불부 / 기준: 매일 작성 및 누락 여부 확인")
+                mfg_data["[제조] (5) 자가품질검사"] = render_upload_block("(5) 자가품질검사 (배점 5점)", "mf5", "제출 서류: 자가/공인 검사 성적서 / 기준: 전 항목 적합 판정 여부")
+                mfg_data["[제조] (6) 건강진단"] = render_upload_block("(6) 건강진단 (배점 5점)", "mf6", "제출 서류: 보건증 / 기준: 1년 1개월 이내 검증 및 유효기간 확인")
+                mfg_data["[제조] (7) 위생교육"] = render_upload_block("(7) 위생교육 (배점 5점)", "mf7", "제출 서류: 법정 위생교육 수료증 / 기준: 해당 제조업에 맞는 교육 이수 여부")
+                mfg_data["[제조] (8) 수질검사"] = render_upload_block("(8) 수질검사 (배점 5점)", "mf8", "제출 서류: 상수도 성적서 또는 지하수 성적서 / 기준: 지하수 반년 이내 검사 확인 (1개만 있어도 만점)")
 
             exp2_prefixes = ["mf9", "mf10", "mf11", "mf12", "mf13", "mf14", "mf15", "mf16", "mf17", "mf18"]
             with st.expander(f"2. 환경 및 시설관리 [총 {len(exp2_prefixes)}개 항목 / {get_completed_count(exp2_prefixes)}개 완료]", expanded=True):
-                mfg_data["[제조] (1) 구분구획"] = render_upload_block("(1) 구분구획 (배점 3점)", "mf9", "제출 서류: 작업장 평면도 또는 설비 배치도 / 기준: 구획/구분 표시 여부 확인", is_editable=False)
-                mfg_data["[제조] (2) 환기/청정도"] = render_upload_block("(2) 환기/청정도 (배점 3점)", "mf10", "제출 서류: 낙하세균 검사 일지 등 / 기준: 낙하세균 검사 관리 여부", is_editable=True)
-                mfg_data["[제조] (3) 조명관리"] = render_upload_block("(3) 조명관리 (배점 3점)", "mf11", "제출 서류: 조도검사 관리 일지 / 기준: 조도 관리 여부 확인", is_editable=True)
-                mfg_data["[제조] (4) 청결관리"] = render_upload_block("(4) 청결관리 (배점 3점)", "mf12", "제출 서류: 위생점검일지 또는 세척/소독 기준서 / 기준: 세척/소독 수립 및 실시 여부 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (5) CIP관리"] = render_upload_block("(5) CIP관리 (배점 3점)", "mf13", "제출 서류: CIP 일지 / 기준: CIP 관리 기록 확인", is_editable=False)
-                mfg_data["[제조] (6) 설비_온도"] = render_upload_block("(6) 설비_온도 (배점 3점)", "mf14", "제출 서류: 냉장/냉동 온도 검사 일보 / 기준: 온도 한계기준 이탈 여부 확인", is_editable=True)
-                mfg_data["[제조] (7) 설비_검교정"] = render_upload_block("(7) 설비_검교정 (배점 3점)", "mf15", "제출 서류: 검교정 계획표 또는 검교정 일지 / 기준: 검교정 실시 여부 확인 (1개만 있어도 만점)", is_editable=True)
-                mfg_data["[제조] (8) 보관관리_MSDS"] = render_upload_block("(8) 보관관리_MSDS (배점 3점)", "mf16", "제출 서류: 화학제 MSDS 보관 사진 또는 문서 / 기준: 화학물질 관리 여부 확인", is_editable=False)
-                mfg_data["[제조] (9) 보관관리_기준서"] = render_upload_block("(9) 보관관리_기준서 (배점 3점)", "mf17", "제출 서류: 보관관리기준서 / 기준: 보관 기준 적합 여부 확인", is_editable=False)
-                mfg_data["[제조] (10) 저수시설"] = render_upload_block("(10) 저수시설 (배점 3점)", "mf18", "제출 서류: 저수조 청소 관련 서류 / 기준: 청소 실시 기록 확인", is_editable=False)
+                mfg_data["[제조] (1) 구분구획"] = render_upload_block("(1) 구분구획 (배점 3점)", "mf9", "제출 서류: 작업장 평면도 또는 설비 배치도 / 기준: 구획/구분 표시 여부 확인")
+                mfg_data["[제조] (2) 환기/청정도"] = render_upload_block("(2) 환기/청정도 (배점 3점)", "mf10", "제출 서류: 낙하세균 검사 일지 등 / 기준: 낙하세균 검사 관리 여부")
+                mfg_data["[제조] (3) 조명관리"] = render_upload_block("(3) 조명관리 (배점 3점)", "mf11", "제출 서류: 조도검사 관리 일지 / 기준: 조도 관리 여부 확인")
+                mfg_data["[제조] (4) 청결관리"] = render_upload_block("(4) 청결관리 (배점 3점)", "mf12", "제출 서류: 위생점검일지 또는 세척/소독 기준서 / 기준: 세척/소독 수립 및 실시 여부 (1개만 있어도 만점)")
+                mfg_data["[제조] (5) CIP관리"] = render_upload_block("(5) CIP관리 (배점 3점)", "mf13", "제출 서류: CIP 일지 / 기준: CIP 관리 기록 확인")
+                mfg_data["[제조] (6) 설비_온도"] = render_upload_block("(6) 설비_온도 (배점 3점)", "mf14", "제출 서류: 냉장/냉동 온도 검사 일보 / 기준: 온도 한계기준 이탈 여부 확인")
+                mfg_data["[제조] (7) 설비_검교정"] = render_upload_block("(7) 설비_검교정 (배점 3점)", "mf15", "제출 서류: 검교정 계획표 또는 검교정 일지 / 기준: 검교정 실시 여부 확인 (1개만 있어도 만점)")
+                mfg_data["[제조] (8) 보관관리_MSDS"] = render_upload_block("(8) 보관관리_MSDS (배점 3점)", "mf16", "제출 서류: 화학제 MSDS 보관 사진 또는 문서 / 기준: 화학물질 관리 여부 확인")
+                mfg_data["[제조] (9) 보관관리_기준서"] = render_upload_block("(9) 보관관리_기준서 (배점 3점)", "mf17", "제출 서류: 보관관리기준서 / 기준: 보관 기준 적합 여부 확인")
+                mfg_data["[제조] (10) 저수시설"] = render_upload_block("(10) 저수시설 (배점 3점)", "mf18", "제출 서류: 저수조 청소 관련 서류 / 기준: 청소 실시 기록 확인")
 
             exp3_prefixes = ["mf20"]
             with st.expander(f"3. 방충방서관리 [총 1개 항목 / {get_completed_count(exp3_prefixes)}개 완료]", expanded=True):
-                mfg_data["[제조] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 3점)", "mf20", "제출 서류: 방충방서 소독 일지 또는 보고서 / 기준: 매월 정기 소독 기록 여부", is_editable=False)
+                mfg_data["[제조] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 3점)", "mf20", "제출 서류: 방충방서 소독 일지 또는 보고서 / 기준: 매월 정기 소독 기록 여부")
 
             exp4_prefixes = ["mf22", "mf23", "mf24", "mf25", "mf26"]
             if t1 or t3:
                 exp4_prefixes.insert(0, "mf21")
             with st.expander(f"4. 공정 및 규격관리 [총 {len(exp4_prefixes)}개 항목 / {get_completed_count(exp4_prefixes)}개 완료]", expanded=True):
                 if t1 or t3:
-                    mfg_data["[제조] (1) 공정관리"] = render_upload_block("(1) 공정관리 (배점 8점)", "mf21", "제출 서류: 각 공정별 CCP 일지 / 기준: 한계기준 100% 충족 및 누락 없을 것", is_editable=True)
-                mfg_data["[제조] (2) 완제품관리"] = render_upload_block("(2) 완제품관리 (배점 3점)", "mf22", "제출 서류: 완제품 검사 일지 / 기준: 규격 검사 실시 및 전 항목 적합 여부", is_editable=False)
-                mfg_data["[제조] (3) 구매관리_점검"] = render_upload_block("(3) 구매관리_점검 (배점 3점)", "mf23", "제출 서류: 협력업체 점검 기준서 또는 점검 기록 / 기준: 구매업체 점검 여부 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (4) 구매관리_입고"] = render_upload_block("(4) 구매관리_입고 (배점 3점)", "mf24", "제출 서류: 입고 검사 일지 / 기준: 입고 시 기준 부합 검사 여부", is_editable=False)
-                mfg_data["[제조] (5) 구매관리_성적서"] = render_upload_block("(5) 구매관리_성적서 (배점 3점)", "mf25", "제출 서류: 원부재료 성적서 (GMO, 원산지 등) / 기준: 성적서 수취 여부", is_editable=False)
-                mfg_data["[제조] (6) 클레임/반품관리"] = render_upload_block("(6) 클레임/반품관리 (배점 3점)", "mf26", "제출 서류: 클레임 관리 기준서 또는 처리 내역 / 기준: 클레임 관리 여부 (1개만 있어도 만점)", is_editable=False)
+                    mfg_data["[제조] (1) 공정관리"] = render_upload_block("(1) 공정관리 (배점 8점)", "mf21", "제출 서류: 각 공정별 CCP 일지 / 기준: 한계기준 100% 충족 및 누락 없을 것")
+                mfg_data["[제조] (2) 완제품관리"] = render_upload_block("(2) 완제품관리 (배점 3점)", "mf22", "제출 서류: 완제품 검사 일지 / 기준: 규격 검사 실시 및 전 항목 적합 여부")
+                mfg_data["[제조] (3) 구매관리_점검"] = render_upload_block("(3) 구매관리_점검 (배점 3점)", "mf23", "제출 서류: 협력업체 점검 기준서 또는 점검 기록 / 기준: 구매업체 점검 여부 (1개만 있어도 만점)")
+                mfg_data["[제조] (4) 구매관리_입고"] = render_upload_block("(4) 구매관리_입고 (배점 3점)", "mf24", "제출 서류: 입고 검사 일지 / 기준: 입고 시 기준 부합 검사 여부")
+                mfg_data["[제조] (5) 구매관리_성적서"] = render_upload_block("(5) 구매관리_성적서 (배점 3점)", "mf25", "제출 서류: 원부재료 성적서 (GMO, 원산지 등) / 기준: 성적서 수취 여부")
+                mfg_data["[제조] (6) 클레임/반품관리"] = render_upload_block("(6) 클레임/반품관리 (배점 3점)", "mf26", "제출 서류: 클레임 관리 기준서 또는 처리 내역 / 기준: 클레임 관리 여부 (1개만 있어도 만점)")
 
             exp5_prefixes = ["mf27", "mf28"]
             with st.expander(f"5. 작업자관리 [총 2개 항목 / {get_completed_count(exp5_prefixes)}개 완료]", expanded=True):
-                mfg_data["[제조] (1) 개인위생"] = render_upload_block("(1) 개인위생 (배점 3점)", "mf27", "제출 서류: 위생관리기준서 또는 개인위생관리일지 / 기준: 출입절차 및 위생 상태 양호 여부 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (2) 위생교육일지"] = render_upload_block("(2) 위생교육일지 (배점 3점)", "mf28", "제출 서류: 자체(내부) 정기 위생 교육일지 / 기준: 위생교육 주기적 실시 여부", is_editable=False)
+                mfg_data["[제조] (1) 개인위생"] = render_upload_block("(1) 개인위생 (배점 3점)", "mf27", "제출 서류: 위생관리기준서 또는 개인위생관리일지 / 기준: 출입절차 및 위생 상태 양호 여부 (1개만 있어도 만점)")
+                mfg_data["[제조] (2) 위생교육일지"] = render_upload_block("(2) 위생교육일지 (배점 3점)", "mf28", "제출 서류: 자체(내부) 정기 위생 교육일지 / 기준: 위생교육 주기적 실시 여부")
 
         if is_dist:
             st.markdown("### [유통/수입] 평가항목 서류 및 기준 입력")
@@ -477,31 +478,31 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 exp_dist1_prefixes.insert(3, "df4")
             
             with st.expander(f"1. 서류 관리 [총 {len(exp_dist1_prefixes)}개 항목 / {get_completed_count(exp_dist1_prefixes)}개 완료]", expanded=True):
-                dist_data["[유통] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "df1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 5점)", "df2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 유효기간 만료 여부 확인", is_editable=False)
+                dist_data["[유통] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "df1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)")
+                dist_data["[유통] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 5점)", "df2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 유효기간 만료 여부 확인")
                 if t6:
-                    dist_data["[유통] (3) 품목제조보고(국내)"] = render_upload_block("(3) 품목제조보고(국내) (배점 5점)", "df3", "제출 서류: 품목제조보고서 / 기준: 제품명, 유통기한 일치 여부", is_editable=False)
+                    dist_data["[유통] (3) 품목제조보고(국내)"] = render_upload_block("(3) 품목제조보고(국내) (배점 5점)", "df3", "제출 서류: 품목제조보고서 / 기준: 제품명, 유통기한 일치 여부")
                 if t5:
-                    dist_data["[유통] (4) 수입 관련 서류"] = render_upload_block("(4) 수입 관련 서류 (배점 10점)", "df4", "제출 서류: 수입신고필증 또는 수입신고확인증 / 기준: 통관 내역 적합 여부 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 여부", is_editable=False)
+                    dist_data["[유통] (4) 수입 관련 서류"] = render_upload_block("(4) 수입 관련 서류 (배점 10점)", "df4", "제출 서류: 수입신고필증 또는 수입신고확인증 / 기준: 통관 내역 적합 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 여부")
 
             exp_dist2_prefixes = ["df6", "df7", "df8", "df9", "df10"]
             with st.expander(f"2. 입고 및 보관 관리 [총 {len(exp_dist2_prefixes)}개 항목 / {get_completed_count(exp_dist2_prefixes)}개 완료]", expanded=True):
-                dist_data["[유통] (1) 입고관리"] = render_upload_block("(1) 입고관리 (배점 10점)", "df6", "제출 서류: 입고기준서(규격서) 또는 입고관리일지 / 기준: 자체 입고 기준 적합 여부 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (2) 보관관리"] = render_upload_block("(2) 보관관리 (배점 15점)", "df7", "제출 서류: 보관관리 일지 (차량 타코메타 등) / 기준: 온도, 습도 등 적정 보관 기록 확인", is_editable=True)
-                dist_data["[유통] (3) 부적합품 관리"] = render_upload_block("(3) 부적합품 관리 (배점 5점)", "df8", "제출 서류: 부적합품 관리 기준서 또는 처리 내역 / 기준: 반품 및 부적합 처리 여부 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (4) 설비_이력"] = render_upload_block("(4) 설비_이력 (배점 5점)", "df9", "제출 서류: 냉장/냉동 설비 이력 관리 서류 / 기준: 설비 점검 및 관리 여부", is_editable=False)
-                dist_data["[유통] (5) 설비_검교정"] = render_upload_block("(5) 설비_검교정 (배점 5점)", "df10", "제출 서류: 검교정 계획표 또는 검교정 일지 / 기준: 온도계 등 검교정 여부 (1개만 있어도 만점)", is_editable=False)
+                dist_data["[유통] (1) 입고관리"] = render_upload_block("(1) 입고관리 (배점 10점)", "df6", "제출 서류: 입고기준서(규격서) 또는 입고관리일지 / 기준: 자체 입고 기준 적합 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (2) 보관관리"] = render_upload_block("(2) 보관관리 (배점 15점)", "df7", "제출 서류: 보관관리 일지 (차량 타코메타 등) / 기준: 온도, 습도 등 적정 보관 기록 확인")
+                dist_data["[유통] (3) 부적합품 관리"] = render_upload_block("(3) 부적합품 관리 (배점 5점)", "df8", "제출 서류: 부적합품 관리 기준서 또는 처리 내역 / 기준: 반품 및 부적합 처리 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (4) 설비_이력"] = render_upload_block("(4) 설비_이력 (배점 5점)", "df9", "제출 서류: 냉장/냉동 설비 이력 관리 서류 / 기준: 설비 점검 및 관리 여부")
+                dist_data["[유통] (5) 설비_검교정"] = render_upload_block("(5) 설비_검교정 (배점 5점)", "df10", "제출 서류: 검교정 계획표 또는 검교정 일지 / 기준: 온도계 등 검교정 여부 (1개만 있어도 만점)")
 
             exp_dist3_prefixes = ["df12"]
             with st.expander(f"3. 방충·방서관리 [총 1개 항목 / {get_completed_count(exp_dist3_prefixes)}개 완료]", expanded=True):
-                dist_data["[유통] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 5점)", "df12", "제출 서류: 방충방서 소독 보고서 / 기준: 정기 소독 관리 여부", is_editable=False)
+                dist_data["[유통] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 5점)", "df12", "제출 서류: 방충방서 소독 보고서 / 기준: 정기 소독 관리 여부")
 
             exp_dist4_prefixes = ["df13", "df14", "df15"]
             with st.expander(f"4. 출고 및 구매관리 [총 3개 항목 / {get_completed_count(exp_dist4_prefixes)}개 완료]", expanded=True):
-                dist_data["[유통] (1) 출고관리"] = render_upload_block("(1) 출고관리 (배점 10점)", "df13", "제출 서류: 수불관리 이력 (출고관리일지 등) / 기준: 유통기한 또는 Lot별 관리 여부", is_editable=False)
-                dist_data["[유통] (2) 구매 업체 관리"] = render_upload_block("(2) 구매 업체 관리 (배점 5점)", "df14", "제출 서류: 구매관리기준서, 협력업체 관리 기준, 점검 내역 중 1 / 기준: 협력사 관리 여부 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (3) 클레임/반품관리"] = render_upload_block("(3) 클레임/반품관리 (배점 10점)", "df15", "제출 서류: 클레임기준서 또는 클레임관리 내역 / 기준: 클레임 및 부적합 관리 여부 (1개만 있어도 만점)", is_editable=False)
+                dist_data["[유통] (1) 출고관리"] = render_upload_block("(1) 출고관리 (배점 10점)", "df13", "제출 서류: 수불관리 이력 (출고관리일지 등) / 기준: 유통기한 또는 Lot별 관리 여부")
+                dist_data["[유통] (2) 구매 업체 관리"] = render_upload_block("(2) 구매 업체 관리 (배점 5점)", "df14", "제출 서류: 구매관리기준서, 협력업체 관리 기준, 점검 내역 중 1 / 기준: 협력사 관리 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (3) 클레임/반품관리"] = render_upload_block("(3) 클레임/반품관리 (배점 10점)", "df15", "제출 서류: 클레임기준서 또는 클레임관리 내역 / 기준: 클레임 및 부적합 관리 여부 (1개만 있어도 만점)")
 
     # ----------------------------------------
     # 탭 3: 검사내용 시트
@@ -519,7 +520,27 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         else:
             if t1 or t3 or t6:
                 st.markdown("### [제조/국내유통] 법적 기준 입력 및 성적서 대조")
-                mfg_df = st.data_editor(pd.DataFrame([{"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}]), num_rows="dynamic", key="mdf")
+                
+                st.info("""
+                **[📋 작성 가이드]**
+                하단에 업로드하실 **'자가/공인 검사 성적서'** 원본을 기준으로, 핵심 검사항목과 법적 기준, 그리고 실제 검사 결과값을 표에 입력해 주십시오.
+                입력하신 데이터는 첨부된 성적서와 1:1로 정밀하게 AI 교차 검증됩니다.
+                
+                *   **입력 예시 참조:** 표 첫 줄의 예시를 참고하여 작성해 주십시오. (예시는 지우고 쓰셔도 무방합니다)
+                *   **행 추가 방법:** 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 입력 칸이 계속 추가됩니다.
+                """)
+                
+                mfg_df = st.data_editor(
+                    pd.DataFrame([
+                        {"제품명": "예시) 연세우유", "검사항목(예: 납)": "예시) 대장균군", "법적기준(예: 3.5이하)": "예시) n=5, c=2, m=0, M=10", "자가검사수치": "예시) 적합(음성)"},
+                        {"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}
+                    ]), 
+                    num_rows="dynamic", 
+                    use_container_width=True,
+                    key="mdf"
+                )
+                
+                st.markdown("<br>", unsafe_allow_html=True)
                 mfg_coa_na = st.checkbox("해당사항 없음 (N/A) - 검사성적서", key="mfg_coa_na")
                 if mfg_coa_na:
                     mfg_coa_na_reason = st.text_input("검사성적서 해당사항 없음 사유:", key="mfg_coa_na_reason")
@@ -527,7 +548,24 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
             if t5:
                 st.markdown("### [수입판매] COA 통관 검사 기준 입력")
-                dist_df = st.data_editor(pd.DataFrame([{"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}]), num_rows="dynamic", key="ddf")
+                
+                st.info("""
+                **[📋 작성 가이드]**
+                하단에 업로드하실 **'수입 COA 성적서'** 원본을 기준으로, 주요 검사항목과 통관 기준, 그리고 수입 시 실제 검사 결과값을 표에 입력해 주십시오.
+                *   **행 추가 방법:** 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 칸이 추가됩니다.
+                """)
+                
+                dist_df = st.data_editor(
+                    pd.DataFrame([
+                        {"제품명": "예시) 멸균유", "COA검사항목": "예시) 세균수", "COA법적기준": "예시) 음성", "수입시검사수치": "예시) 음성"},
+                        {"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}
+                    ]), 
+                    num_rows="dynamic", 
+                    use_container_width=True,
+                    key="ddf"
+                )
+                
+                st.markdown("<br>", unsafe_allow_html=True)
                 dist_coa_na = st.checkbox("해당사항 없음 (N/A) - COA", key="dist_coa_na")
                 if dist_coa_na:
                     dist_coa_na_reason = st.text_input("COA 해당사항 없음 사유:", key="dist_coa_na_reason")
