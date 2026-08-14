@@ -6,6 +6,9 @@ import datetime
 import os
 import io
 import re
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
@@ -245,11 +248,38 @@ def is_passed(row):
             
     return False
 
+def send_email(to_email, subject, body):
+    sender_email = st.secrets.get("SMTP_EMAIL", "")
+    app_pw = st.secrets.get("SMTP_PASSWORD", "")
+    
+    if not sender_email or not app_pw:
+        return False, "[오류] 시스템(st.secrets)에 SMTP_EMAIL 또는 SMTP_PASSWORD가 설정되지 않아 메일을 발송할 수 없습니다."
+        
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'html'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, app_pw)
+        server.send_message(msg)
+        server.quit()
+        return True, "발송 성공"
+    except Exception as e:
+        return False, str(e)
+
 # ==========================================
 # [3] 사이드바 메뉴
 # ==========================================
 st.sidebar.title("시스템 메뉴")
-menu = st.sidebar.radio("접속 화면을 선택하세요", ["업체 서류 일괄 제출 (AI 검증)", "관리자 대시보드 (육안 재확인 및 수정)"])
+menu = st.sidebar.radio("접속 화면을 선택하세요", [
+    "업체 서류 일괄 제출 (AI 검증)", 
+    "관리자 대시보드 (육안 재확인 및 수정)",
+    "관리자 업체관리 (메일 발송)"
+])
 
 # ==========================================
 # [4] 업체 서류 일괄 제출 화면
@@ -1031,6 +1061,116 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                             "드라이브링크": st.column_config.TextColumn("드라이브링크 ( | 로 구분됨)")
                         }
                     )
+        except Exception as e:
+            st.error(f"[오류] 데이터베이스 연결 실패: {e}")
+    elif admin_pw != "":
+        st.error("[오류] 비밀번호가 일치하지 않습니다.")
+
+# ==========================================
+# [6] 관리자 업체관리 (메일 발송) 메뉴
+# ==========================================
+elif menu == "관리자 업체관리 (메일 발송)":
+    st.title("관리자 업체관리 및 안내 메일 발송 시스템")
+    admin_pw = st.text_input("관리자 비밀번호:", type="password")
+
+    if admin_pw == "2082":
+        try:
+            creds = get_credentials()
+            gc = gspread.authorize(creds)
+            sh = gc.open_by_key(GOOGLE_SHEET_ID)
+            worksheet = sh.sheet1
+            all_data = worksheet.get_all_records()
+            log_df = pd.DataFrame(all_data)
+
+            if log_df.empty:
+                st.warning("[안내] 등록된 업체 이메일 데이터가 없습니다.")
+            else:
+                email_dict = {}
+                for idx, row in log_df.dropna(subset=['업체명', '담당자이메일']).iterrows():
+                    comp = str(row['업체명']).strip()
+                    email = str(row['담당자이메일']).strip()
+                    if comp and email:
+                        email_dict[comp] = email
+
+                tab_mail1, tab_mail2 = st.tabs(["일괄 안내 메일 발송 (전체 업체)", "미비 서류 보완 요청 메일 (개별 발송)"])
+
+                with tab_mail1:
+                    st.markdown("### 정기 심사 일괄 안내 메일 발송")
+                    st.caption("[안내] 시스템 내부에 저장된 이메일은 '한 번이라도 서류를 제출한 업체'의 이메일입니다. 미제출 업체에게 보내려면 이메일 주소를 직접 붙여넣어 수정하실 수 있습니다.")
+                    
+                    default_emails = ", ".join(list(set(email_dict.values())))
+                    target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=default_emails, height=100)
+                    
+                    mail_subject_bulk = st.text_input("메일 제목:", value="[연세유업 아산공장] 2026년도 협력업체 서류 심사 제출 안내")
+                    mail_body_bulk = st.text_area("메일 내용 (텍스트 또는 HTML):", value="안녕하십니까,\n연세유업 아산공장 식품안전팀 곽정혁입니다.\n\n2026년도 협력업체 서류 심사 기간이 도래하여 안내해 드립니다.\n해당 시스템에 접속하시어 기한 내에 필수 서류를 업로드해 주시기 바랍니다.\n\n감사합니다.", height=200)
+
+                    if st.button("안내 메일 일괄 전송", type="primary"):
+                        email_list = [e.strip() for e in target_emails_input.split(",") if e.strip()]
+                        if not email_list:
+                            st.error("발송할 이메일 주소가 없습니다.")
+                        else:
+                            progress_text = "메일을 발송하고 있습니다..."
+                            mail_bar = st.progress(0, text=progress_text)
+                            success_count = 0
+                            
+                            for i, recipient in enumerate(email_list):
+                                success, msg = send_email(recipient, mail_subject_bulk, mail_body_bulk.replace('\n', '<br>'))
+                                if success:
+                                    success_count += 1
+                                mail_bar.progress((i + 1) / len(email_list), text=f"{recipient} 발송 중...")
+                                
+                            mail_bar.empty()
+                            st.success(f"총 {len(email_list)}개 중 {success_count}개의 이메일이 성공적으로 발송되었습니다.")
+
+                with tab_mail2:
+                    st.markdown("### 미비 서류 보완 요청 메일 발송")
+                    st.caption("[안내] 심사 결과 '미비(0점)' 처리된 항목이 있는 업체를 선택하여 보완 요청 메일을 발송합니다.")
+                    
+                    def is_deducted_mail(row):
+                        score_str = str(row.get('관리자최종점수', '0점'))
+                        if "해당사항 없음" in score_str: return False
+                        if "만점" in score_str or "통과" in score_str: return False
+                        doc_name = str(row.get('심사항목', ''))
+                        max_score = DOC_MAX_SCORES.get(doc_name, 0)
+                        if max_score > 0:
+                            match = re.search(r'(\d+)점', score_str)
+                            earned = int(match.group(1)) if match else 0
+                            if earned >= max_score: return False
+                        return True
+
+                    zero_score_df_all = log_df[log_df.apply(is_deducted_mail, axis=1)]
+                    
+                    if zero_score_df_all.empty:
+                        st.info("현재 미비 서류(감점)가 존재하는 업체가 없습니다.")
+                    else:
+                        target_comp_mail = st.selectbox("보완 요청을 보낼 업체를 선택하세요:", ["선택하세요"] + list(zero_score_df_all['업체명'].unique()))
+                        
+                        if target_comp_mail != "선택하세요":
+                            comp_zero_df = zero_score_df_all[zero_score_df_all['업체명'] == target_comp_mail]
+                            target_email = email_dict.get(target_comp_mail, "")
+                            
+                            st.text_input("수신자 이메일 (해당 업체):", value=target_email, disabled=True)
+                            
+                            mail_subject_req = st.text_input("메일 제목 (보완 요청):", value=f"[연세유업 아산공장] {target_comp_mail} 서류 심사 미비 항목 보완 요청")
+                            
+                            missing_items_text = ""
+                            for idx, row in comp_zero_df.iterrows():
+                                missing_items_text += f"- {row['심사항목']}\n  (사유: {row['AI상세사유']})\n\n"
+                            
+                            default_req_body = f"안녕하십니까,\n연세유업 아산공장 식품안전팀 곽정혁입니다.\n\n제출해주신 서류 심사 결과, 아래 항목에 대한 보완이 필요하여 안내해 드립니다.\n\n[미비 항목 및 사유]\n{missing_items_text}\n위 미비된 서류를 준비하시어 본 메일(rhkrwjdgur@yonseidairy.com)로 회신하여 주시기 바랍니다.\n\n감사합니다."
+                            
+                            mail_body_req = st.text_area("메일 내용 (보완 요청):", value=default_req_body, height=300)
+
+                            if st.button("해당 업체로 보완 요청 메일 발송", type="primary"):
+                                if not target_email:
+                                    st.error("해당 업체의 이메일 정보가 존재하지 않습니다.")
+                                else:
+                                    success, msg = send_email(target_email, mail_subject_req, mail_body_req.replace('\n', '<br>'))
+                                    if success:
+                                        st.success(f"{target_comp_mail} 담당자({target_email})에게 메일 발송을 완료했습니다.")
+                                    else:
+                                        st.error(f"메일 발송 실패: {msg}")
+
         except Exception as e:
             st.error(f"[오류] 데이터베이스 연결 실패: {e}")
     elif admin_pw != "":
