@@ -9,6 +9,7 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
@@ -248,7 +249,7 @@ def is_passed(row):
             
     return False
 
-def send_email(to_email, subject, body):
+def send_email(to_email, subject, body, attachment_file=None):
     available_keys = list(st.secrets.keys())
     sender_email = st.secrets.get("SMTP_EMAIL", "")
     app_pw = st.secrets.get("SMTP_PASSWORD", "")
@@ -262,6 +263,12 @@ def send_email(to_email, subject, body):
         msg['To'] = to_email
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'html'))
+        
+        if attachment_file is not None:
+            attachment_file.seek(0)
+            part = MIMEApplication(attachment_file.read(), Name=attachment_file.name)
+            part['Content-Disposition'] = f'attachment; filename="{attachment_file.name}"'
+            msg.attach(part)
         
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
@@ -1140,7 +1147,23 @@ elif menu == "관리자 업체관리 (메일 발송)":
                     target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=default_emails, height=100)
                     
                     mail_subject_bulk = st.text_input("메일 제목:", value="[연세유업 아산공장] 2026년도 협력업체 서류 심사 제출 안내")
-                    mail_body_bulk = st.text_area("메일 내용 (텍스트 또는 HTML):", value="안녕하십니까,\n연세유업 아산공장 식품안전팀 곽정혁입니다.\n\n2026년도 협력업체 서류 심사 기간이 도래하여 안내해 드립니다.\n아래 시스템 링크에 접속하시어 기한 내에 필수 서류를 업로드해 주시기 바랍니다.\n\n■ 시스템 접속 링크: https://9yhkkjjyezju9w5bxsdhxd.streamlit.app/\n\n감사합니다.", height=200)
+                    
+                    default_bulk_body = """안녕하십니까,
+연세유업 아산공장 식품안전팀 곽정혁입니다.
+
+2026년도 협력업체 서류 심사 기간이 도래하여 안내해 드립니다.
+아래 시스템 링크에 접속하시어 기한 내에 필수 서류를 업로드해 주시기 바랍니다.
+
+■ 시스템 접속 링크: https://9yhkkjjyezju9w5bxsdhxd.streamlit.app/
+
+💡 [안내] 시스템 내부에 '서류 제출 지침 문의 챗봇'이 마련되어 있습니다.
+서류 업로드 시 궁금한 사항이나 기준이 헷갈리실 경우, 해당 챗봇에 적극적으로 문의하시면 즉각적인 가이드를 받으실 수 있습니다.
+또한, 첨부해 드린 매뉴얼을 참고하시어 원활한 서류 접수가 진행될 수 있도록 협조 부탁드립니다.
+
+감사합니다."""
+
+                    mail_body_bulk = st.text_area("메일 내용 (텍스트 또는 HTML):", value=default_bulk_body, height=300)
+                    bulk_attachment = st.file_uploader("안내 메일 첨부파일 (시스템 매뉴얼 등, 선택사항)", key="bulk_attach")
 
                     if st.button("안내 메일 일괄 전송", type="primary"):
                         email_list = [e.strip() for e in target_emails_input.split(",") if e.strip()]
@@ -1152,7 +1175,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
                             success_count = 0
                             
                             for i, recipient in enumerate(email_list):
-                                success, msg = send_email(recipient, mail_subject_bulk, mail_body_bulk.replace('\n', '<br>'))
+                                success, msg = send_email(recipient, mail_subject_bulk, mail_body_bulk.replace('\n', '<br>'), bulk_attachment)
                                 if success:
                                     success_count += 1
                                 else:
