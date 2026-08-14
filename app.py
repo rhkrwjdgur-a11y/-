@@ -90,7 +90,7 @@ DOC_MAX_SCORES = {
 }
 
 # ==========================================
-# [2] 외부 연동 함수
+# [2] 외부 연동 및 유틸리티 함수
 # ==========================================
 def get_credentials():
     try:
@@ -153,14 +153,15 @@ def get_gemini_client():
         st.session_state.gemini_client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
     return st.session_state.gemini_client
 
-def analyze_document_with_ai(prompt_text, file_bytes, mime_type):
+def analyze_documents_with_ai(prompt_text, files_list):
     client = get_gemini_client()
+    contents = [prompt_text]
+    for f in files_list:
+        contents.append(types.Part.from_bytes(data=f.getvalue(), mime_type=f.type))
+        
     response = client.models.generate_content(
         model=GEMINI_MODEL_VISION,
-        contents=[
-            prompt_text,
-            types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
-        ],
+        contents=contents,
     )
 
     result_text = response.text
@@ -178,7 +179,7 @@ def analyze_document_with_ai(prompt_text, file_bytes, mime_type):
     admin_score = judgment
     return judgment, reason, admin_score
 
-def render_upload_block(label, key_prefix, default_criteria_hint, is_editable=False):
+def render_upload_block(label, key_prefix, explicit_criteria):
     st.markdown(f"**{label}**")
     
     is_na = st.checkbox("해당사항 없음 (N/A)", key=f"{key_prefix}_na")
@@ -186,30 +187,59 @@ def render_upload_block(label, key_prefix, default_criteria_hint, is_editable=Fa
     if is_na:
         na_reason = st.text_input("해당사항 없음 사유를 입력하십시오:", key=f"{key_prefix}_na_reason")
     
-    if is_editable:
-        crit = st.text_input(
-            "평가 기준 및 방법 (자체 기준에 맞게 일부 수정 가능)",
-            value=default_criteria_hint,
-            key=f"{key_prefix}_crit",
-            disabled=is_na
-        )
-    else:
-        crit = st.text_input(
-            "평가 기준 및 방법 (해당 조건 충족 필수)",
-            value=default_criteria_hint,
-            key=f"{key_prefix}_crit",
-            disabled=True
-        )
-    file = st.file_uploader("증빙자료 업로드", key=f"{key_prefix}_file", label_visibility="collapsed", disabled=is_na)
+    crit = st.text_input(
+        "평가 기준 및 필수 제출 서류 (수정 불가)",
+        value=explicit_criteria,
+        key=f"{key_prefix}_crit",
+        disabled=True
+    )
+    
+    files = st.file_uploader("증빙자료 업로드 (다중 파일 선택 가능)", key=f"{key_prefix}_file", label_visibility="collapsed", accept_multiple_files=True, disabled=is_na)
     st.markdown("---")
-    return {"criteria": crit, "file": file, "is_na": is_na, "na_reason": na_reason}
+    return {"criteria": crit, "files": files, "is_na": is_na, "na_reason": na_reason}
 
 def get_completed_count(prefixes):
     count = 0
     for p in prefixes:
-        if st.session_state.get(f"{p}_na", False) or st.session_state.get(f"{p}_file") is not None:
+        if st.session_state.get(f"{p}_na", False) or bool(st.session_state.get(f"{p}_file")):
             count += 1
     return count
+
+def is_deducted(row):
+    score_str = str(row.get('관리자최종점수', '0점'))
+    if "해당사항 없음" in score_str: 
+        return False
+    if "만점" in score_str or "통과" in score_str: 
+        return False
+    
+    doc_name = str(row.get('심사항목', ''))
+    max_score = DOC_MAX_SCORES.get(doc_name, 0)
+    
+    if max_score > 0:
+        match = re.search(r'(\d+)점', score_str)
+        earned = int(match.group(1)) if match else 0
+        if earned >= max_score: 
+            return False
+    return True
+
+def is_passed(row):
+    score_str = str(row.get('관리자최종점수', '0점'))
+    if "해당사항 없음" in score_str:
+        return False
+        
+    doc_name = str(row.get('심사항목', ''))
+    max_score = DOC_MAX_SCORES.get(doc_name, 0)
+    
+    if "만점" in score_str or "통과" in score_str:
+        return True
+        
+    if max_score > 0:
+        match = re.search(r'(\d+)점', score_str)
+        earned = int(match.group(1)) if match else 0
+        if earned >= max_score:
+            return True
+            
+    return False
 
 # ==========================================
 # [3] 사이드바 메뉴
@@ -353,55 +383,55 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
         if is_mfg:
             st.markdown("### [제조] 서류 심사 (증빙 자료 제출)")
-            st.caption("[안내] 증빙자료 업로드 원칙: 품목제조보고서와 자가/공인 성적서는 '납품 전 품목', 나머지는 '최근 1개월 대표 샘플 1부'를 업로드합니다.")
+            st.caption("[안내] 각 평가항목별 필수 제출 서류를 확인하고 1개 이상의 파일을 자유롭게 업로드하십시오.")
 
             exp1_prefixes = ["mf1", "mf2", "mf4", "mf5", "mf6", "mf7", "mf8"]
             if t1 or t3:
                 exp1_prefixes.insert(2, "mf3")
             with st.expander(f"1. 서류관리 [총 {len(exp1_prefixes)}개 항목 / {get_completed_count(exp1_prefixes)}개 완료]", expanded=True):
-                mfg_data["[제조] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "mf1", "1. 영업허가증/신고증, 2.사업자등록증 유무 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 3점)", "mf2", "인증서 유무(HACCP, FSSC22000 등)", is_editable=False)
+                mfg_data["[제조] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "mf1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)")
+                mfg_data["[제조] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 3점)", "mf2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 사항 일치 및 유효기간 만료 여부")
                 if t1 or t3:
-                    mfg_data["[제조] (3) 품목제조보고"] = render_upload_block("(3) 품목제조보고 (배점 5점)", "mf3", "품목제조보고서 유무", is_editable=False)
-                mfg_data["[제조] (4) 원료수불부"] = render_upload_block("(4) 원료수불부 (배점 5점)", "mf4", "원료수불 관리 기록 유무", is_editable=False)
-                mfg_data["[제조] (5) 자가품질검사"] = render_upload_block("(5) 자가품질검사 (배점 5점)", "mf5", "자가품질검사 성적서 유무", is_editable=False)
-                mfg_data["[제조] (6) 건강진단"] = render_upload_block("(6) 건강진단 (배점 5점)", "mf6", "보건증 유무 (1년 1개월 이내 검증)", is_editable=False)
-                mfg_data["[제조] (7) 위생교육"] = render_upload_block("(7) 위생교육 (배점 5점)", "mf7", "법정교육 수료증 유무", is_editable=False)
-                mfg_data["[제조] (8) 수질검사"] = render_upload_block("(8) 수질검사 (배점 5점)", "mf8", "상수도 성적서 또는 지하수 반년 이내 성적서 (1개만 있어도 만점)", is_editable=False)
+                    mfg_data["[제조] (3) 품목제조보고"] = render_upload_block("(3) 품목제조보고 (배점 5점)", "mf3", "제출 서류: 품목제조보고서 / 기준: 제품명, 원료, 유통기한 일치 여부")
+                mfg_data["[제조] (4) 원료수불부"] = render_upload_block("(4) 원료수불부 (배점 5점)", "mf4", "제출 서류: 원료수불부 / 기준: 매일 작성 및 누락 여부 확인")
+                mfg_data["[제조] (5) 자가품질검사"] = render_upload_block("(5) 자가품질검사 (배점 5점)", "mf5", "제출 서류: 자가/공인 검사 성적서 / 기준: 전 항목 적합 판정 여부")
+                mfg_data["[제조] (6) 건강진단"] = render_upload_block("(6) 건강진단 (배점 5점)", "mf6", "제출 서류: 보건증 / 기준: 1년 1개월 이내 검증 및 유효기간 확인")
+                mfg_data["[제조] (7) 위생교육"] = render_upload_block("(7) 위생교육 (배점 5점)", "mf7", "제출 서류: 법정 위생교육 수료증 / 기준: 해당 제조업에 맞는 교육 이수 여부")
+                mfg_data["[제조] (8) 수질검사"] = render_upload_block("(8) 수질검사 (배점 5점)", "mf8", "제출 서류: 상수도 성적서 또는 지하수 성적서 / 기준: 지하수 반년 이내 검사 확인 (1개만 있어도 만점)")
 
             exp2_prefixes = ["mf9", "mf10", "mf11", "mf12", "mf13", "mf14", "mf15", "mf16", "mf17", "mf18"]
-            with st.expander(f"2. 환경 및 시설관리 [총 {len(exp2_prefixes)}개 항목 / {get_completed_count(exp2_prefixes)}개 완료]", expanded=False):
-                mfg_data["[제조] (1) 구분구획"] = render_upload_block("(1) 구분구획 (배점 3점)", "mf9", "평면도 유무", is_editable=False)
-                mfg_data["[제조] (2) 환기/청정도"] = render_upload_block("(2) 환기/청정도 (배점 3점)", "mf10", "낙하세균 검사 관리 유무", is_editable=True)
-                mfg_data["[제조] (3) 조명관리"] = render_upload_block("(3) 조명관리 (배점 3점)", "mf11", "조도검사 관리 유무", is_editable=True)
-                mfg_data["[제조] (4) 청결관리"] = render_upload_block("(4) 청결관리 (배점 3점)", "mf12", "위생점검일지 또는 세척소독 기준서 유무 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (5) CIP관리"] = render_upload_block("(5) CIP관리 (배점 3점)", "mf13", "CIP 일지 유무", is_editable=False)
-                mfg_data["[제조] (6) 설비_온도"] = render_upload_block("(6) 설비_온도 (배점 3점)", "mf14", "냉동/냉장 온도 검사 일보 유무", is_editable=True)
-                mfg_data["[제조] (7) 설비_검교정"] = render_upload_block("(7) 설비_검교정 (배점 3점)", "mf15", "검교정 계획표 or 검교정 일지 유무 (1개만 있어도 만점)", is_editable=True)
-                mfg_data["[제조] (8) 보관관리_MSDS"] = render_upload_block("(8) 보관관리_MSDS (배점 3점)", "mf16", "화학제 MSDS 보관 유무", is_editable=False)
-                mfg_data["[제조] (9) 보관관리_기준서"] = render_upload_block("(9) 보관관리_기준서 (배점 3점)", "mf17", "보관관리기준서 유무", is_editable=False)
-                mfg_data["[제조] (10) 저수시설"] = render_upload_block("(10) 저수시설 (배점 3점)", "mf18", "저수도 청소 관련 서류 유무", is_editable=False)
+            with st.expander(f"2. 환경 및 시설관리 [총 {len(exp2_prefixes)}개 항목 / {get_completed_count(exp2_prefixes)}개 완료]", expanded=True):
+                mfg_data["[제조] (1) 구분구획"] = render_upload_block("(1) 구분구획 (배점 3점)", "mf9", "제출 서류: 작업장 평면도 또는 설비 배치도 / 기준: 구획/구분 표시 여부 확인")
+                mfg_data["[제조] (2) 환기/청정도"] = render_upload_block("(2) 환기/청정도 (배점 3점)", "mf10", "제출 서류: 낙하세균 검사 일지 등 / 기준: 낙하세균 검사 관리 여부")
+                mfg_data["[제조] (3) 조명관리"] = render_upload_block("(3) 조명관리 (배점 3점)", "mf11", "제출 서류: 조도검사 관리 일지 / 기준: 조도 관리 여부 확인")
+                mfg_data["[제조] (4) 청결관리"] = render_upload_block("(4) 청결관리 (배점 3점)", "mf12", "제출 서류: 위생점검일지 또는 세척/소독 기준서 / 기준: 세척/소독 수립 및 실시 여부 (1개만 있어도 만점)")
+                mfg_data["[제조] (5) CIP관리"] = render_upload_block("(5) CIP관리 (배점 3점)", "mf13", "제출 서류: CIP 일지 / 기준: CIP 관리 기록 확인")
+                mfg_data["[제조] (6) 설비_온도"] = render_upload_block("(6) 설비_온도 (배점 3점)", "mf14", "제출 서류: 냉장/냉동 온도 검사 일보 / 기준: 온도 한계기준 이탈 여부 확인")
+                mfg_data["[제조] (7) 설비_검교정"] = render_upload_block("(7) 설비_검교정 (배점 3점)", "mf15", "제출 서류: 검교정 계획표 또는 검교정 일지 / 기준: 검교정 실시 여부 확인 (1개만 있어도 만점)")
+                mfg_data["[제조] (8) 보관관리_MSDS"] = render_upload_block("(8) 보관관리_MSDS (배점 3점)", "mf16", "제출 서류: 화학제 MSDS 보관 사진 또는 문서 / 기준: 화학물질 관리 여부 확인")
+                mfg_data["[제조] (9) 보관관리_기준서"] = render_upload_block("(9) 보관관리_기준서 (배점 3점)", "mf17", "제출 서류: 보관관리기준서 / 기준: 보관 기준 적합 여부 확인")
+                mfg_data["[제조] (10) 저수시설"] = render_upload_block("(10) 저수시설 (배점 3점)", "mf18", "제출 서류: 저수조 청소 관련 서류 / 기준: 청소 실시 기록 확인")
 
             exp3_prefixes = ["mf20"]
-            with st.expander(f"3. 방충방서관리 [총 1개 항목 / {get_completed_count(exp3_prefixes)}개 완료]", expanded=False):
-                mfg_data["[제조] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 3점)", "mf20", "방충방서 보고서 유무", is_editable=False)
+            with st.expander(f"3. 방충방서관리 [총 1개 항목 / {get_completed_count(exp3_prefixes)}개 완료]", expanded=True):
+                mfg_data["[제조] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 3점)", "mf20", "제출 서류: 방충방서 소독 일지 또는 보고서 / 기준: 매월 정기 소독 기록 여부")
 
             exp4_prefixes = ["mf22", "mf23", "mf24", "mf25", "mf26"]
             if t1 or t3:
                 exp4_prefixes.insert(0, "mf21")
-            with st.expander(f"4. 공정 및 규격관리 [총 {len(exp4_prefixes)}개 항목 / {get_completed_count(exp4_prefixes)}개 완료]", expanded=False):
+            with st.expander(f"4. 공정 및 규격관리 [총 {len(exp4_prefixes)}개 항목 / {get_completed_count(exp4_prefixes)}개 완료]", expanded=True):
                 if t1 or t3:
-                    mfg_data["[제조] (1) 공정관리"] = render_upload_block("(1) 공정관리 (배점 8점)", "mf21", "CCP 일지 유무", is_editable=True)
-                mfg_data["[제조] (2) 완제품관리"] = render_upload_block("(2) 완제품관리 (배점 3점)", "mf22", "완제품 검사 일지 유무", is_editable=False)
-                mfg_data["[제조] (3) 구매관리_점검"] = render_upload_block("(3) 구매관리_점검 (배점 3점)", "mf23", "협력업체 점검 기준서 or 점검 기록 유무 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (4) 구매관리_입고"] = render_upload_block("(4) 구매관리_입고 (배점 3점)", "mf24", "입고 검사 일지 유무", is_editable=False)
-                mfg_data["[제조] (5) 구매관리_성적서"] = render_upload_block("(5) 구매관리_성적서 (배점 3점)", "mf25", "원부재료 성적서 유무", is_editable=False)
-                mfg_data["[제조] (6) 클레임/반품관리"] = render_upload_block("(6) 클레임/반품관리 (배점 3점)", "mf26", "클레임 관리 기준서 or 처리 내역 유무 (1개만 있어도 만점)", is_editable=False)
+                    mfg_data["[제조] (1) 공정관리"] = render_upload_block("(1) 공정관리 (배점 8점)", "mf21", "제출 서류: 각 공정별 CCP 일지 / 기준: 한계기준 100% 충족 및 누락 없을 것")
+                mfg_data["[제조] (2) 완제품관리"] = render_upload_block("(2) 완제품관리 (배점 3점)", "mf22", "제출 서류: 완제품 검사 일지 / 기준: 규격 검사 실시 및 전 항목 적합 여부")
+                mfg_data["[제조] (3) 구매관리_점검"] = render_upload_block("(3) 구매관리_점검 (배점 3점)", "mf23", "제출 서류: 협력업체 점검 기준서 또는 점검 기록 / 기준: 구매업체 점검 여부 (1개만 있어도 만점)")
+                mfg_data["[제조] (4) 구매관리_입고"] = render_upload_block("(4) 구매관리_입고 (배점 3점)", "mf24", "제출 서류: 입고 검사 일지 / 기준: 입고 시 기준 부합 검사 여부")
+                mfg_data["[제조] (5) 구매관리_성적서"] = render_upload_block("(5) 구매관리_성적서 (배점 3점)", "mf25", "제출 서류: 원부재료 성적서 (GMO, 원산지 등) / 기준: 성적서 수취 여부")
+                mfg_data["[제조] (6) 클레임/반품관리"] = render_upload_block("(6) 클레임/반품관리 (배점 3점)", "mf26", "제출 서류: 클레임 관리 기준서 또는 처리 내역 / 기준: 클레임 관리 여부 (1개만 있어도 만점)")
 
             exp5_prefixes = ["mf27", "mf28"]
-            with st.expander(f"5. 작업자관리 [총 2개 항목 / {get_completed_count(exp5_prefixes)}개 완료]", expanded=False):
-                mfg_data["[제조] (1) 개인위생"] = render_upload_block("(1) 개인위생 (배점 3점)", "mf27", "위생관리기준서 or 개인위생관리일지 유무 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (2) 위생교육일지"] = render_upload_block("(2) 위생교육일지 (배점 3점)", "mf28", "내부 정기 위생 교육일지 유무", is_editable=False)
+            with st.expander(f"5. 작업자관리 [총 2개 항목 / {get_completed_count(exp5_prefixes)}개 완료]", expanded=True):
+                mfg_data["[제조] (1) 개인위생"] = render_upload_block("(1) 개인위생 (배점 3점)", "mf27", "제출 서류: 위생관리기준서 또는 개인위생관리일지 / 기준: 출입절차 및 위생 상태 양호 여부 (1개만 있어도 만점)")
+                mfg_data["[제조] (2) 위생교육일지"] = render_upload_block("(2) 위생교육일지 (배점 3점)", "mf28", "제출 서류: 자체(내부) 정기 위생 교육일지 / 기준: 위생교육 주기적 실시 여부")
 
         if is_dist:
             st.markdown("### [유통/수입] 평가항목 서류 및 기준 입력")
@@ -413,37 +443,37 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 exp_dist1_prefixes.insert(3, "df4")
             
             with st.expander(f"1. 서류 관리 [총 {len(exp_dist1_prefixes)}개 항목 / {get_completed_count(exp_dist1_prefixes)}개 완료]", expanded=True):
-                dist_data["[유통] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "df1", "영업허가증/신고증, 사업자등록증 유무", is_editable=False)
-                dist_data["[유통] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 5점)", "df2", "인증서 유무(HACCP, FSSC22000 등)", is_editable=False)
+                dist_data["[유통] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "df1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)")
+                dist_data["[유통] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 5점)", "df2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 유효기간 만료 여부 확인")
                 if t6:
-                    dist_data["[유통] (3) 품목제조보고(국내)"] = render_upload_block("(3) 품목제조보고(국내) (배점 5점)", "df3", "품목제조보고서 유무", is_editable=False)
+                    dist_data["[유통] (3) 품목제조보고(국내)"] = render_upload_block("(3) 품목제조보고(국내) (배점 5점)", "df3", "제출 서류: 품목제조보고서 / 기준: 제품명, 유통기한 일치 여부")
                 if t5:
-                    dist_data["[유통] (4) 수입 관련 서류"] = render_upload_block("(4) 수입 관련 서류 (배점 10점)", "df4", "1.수입신고필증, 2.수입신고확인증 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제품 성적서 유무", is_editable=False)
+                    dist_data["[유통] (4) 수입 관련 서류"] = render_upload_block("(4) 수입 관련 서류 (배점 10점)", "df4", "제출 서류: 수입신고필증 또는 수입신고확인증 / 기준: 통관 내역 적합 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 여부")
 
             exp_dist2_prefixes = ["df6", "df7", "df8", "df9", "df10"]
-            with st.expander(f"2. 입고 및 보관 관리 [총 {len(exp_dist2_prefixes)}개 항목 / {get_completed_count(exp_dist2_prefixes)}개 완료]", expanded=False):
-                dist_data["[유통] (1) 입고관리"] = render_upload_block("(1) 입고관리 (배점 10점)", "df6", "1.입고기준서 및 규격서, 2.입고관리(기록)일지 유무 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (2) 보관관리"] = render_upload_block("(2) 보관관리 (배점 15점)", "df7", "보관관리 일지 유무(온도, 습도 확인)", is_editable=True)
-                dist_data["[유통] (3) 부적합품 관리"] = render_upload_block("(3) 부적합품 관리 (배점 5점)", "df8", "1. 부적합품 관리 기준서 2.부적함품 처리 내역 유무 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (4) 설비_이력"] = render_upload_block("(4) 설비_이력 (배점 5점)", "df9", "설비 이력관리 유무", is_editable=False)
-                dist_data["[유통] (5) 설비_검교정"] = render_upload_block("(5) 설비_검교정 (배점 5점)", "df10", "1.검교정 계획표, 2.검교정 일지 (1개만 있어도 만점)", is_editable=False)
+            with st.expander(f"2. 입고 및 보관 관리 [총 {len(exp_dist2_prefixes)}개 항목 / {get_completed_count(exp_dist2_prefixes)}개 완료]", expanded=True):
+                dist_data["[유통] (1) 입고관리"] = render_upload_block("(1) 입고관리 (배점 10점)", "df6", "제출 서류: 입고기준서(규격서) 또는 입고관리일지 / 기준: 자체 입고 기준 적합 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (2) 보관관리"] = render_upload_block("(2) 보관관리 (배점 15점)", "df7", "제출 서류: 보관관리 일지 (차량 타코메타 등) / 기준: 온도, 습도 등 적정 보관 기록 확인")
+                dist_data["[유통] (3) 부적합품 관리"] = render_upload_block("(3) 부적합품 관리 (배점 5점)", "df8", "제출 서류: 부적합품 관리 기준서 또는 처리 내역 / 기준: 반품 및 부적합 처리 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (4) 설비_이력"] = render_upload_block("(4) 설비_이력 (배점 5점)", "df9", "제출 서류: 냉장/냉동 설비 이력 관리 서류 / 기준: 설비 점검 및 관리 여부")
+                dist_data["[유통] (5) 설비_검교정"] = render_upload_block("(5) 설비_검교정 (배점 5점)", "df10", "제출 서류: 검교정 계획표 또는 검교정 일지 / 기준: 온도계 등 검교정 여부 (1개만 있어도 만점)")
 
             exp_dist3_prefixes = ["df12"]
-            with st.expander(f"3. 방충·방서관리 [총 1개 항목 / {get_completed_count(exp_dist3_prefixes)}개 완료]", expanded=False):
-                dist_data["[유통] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 5점)", "df12", "방충방서 보고서 유무", is_editable=False)
+            with st.expander(f"3. 방충·방서관리 [총 1개 항목 / {get_completed_count(exp_dist3_prefixes)}개 완료]", expanded=True):
+                dist_data["[유통] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 5점)", "df12", "제출 서류: 방충방서 소독 보고서 / 기준: 정기 소독 관리 여부")
 
             exp_dist4_prefixes = ["df13", "df14", "df15"]
-            with st.expander(f"4. 출고 및 구매관리 [총 3개 항목 / {get_completed_count(exp_dist4_prefixes)}개 완료]", expanded=False):
-                dist_data["[유통] (1) 출고관리"] = render_upload_block("(1) 출고관리 (배점 10점)", "df13", "수불관리 이력 유무", is_editable=False)
-                dist_data["[유통] (2) 구매 업체 관리"] = render_upload_block("(2) 구매 업체 관리 (배점 5점)", "df14", "1.구매관리기준서 2.협력업체 관리 기준 3. 협력업체 관리 내역 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (3) 클레임/반품관리"] = render_upload_block("(3) 클레임/반품관리 (배점 10점)", "df15", "1. 클레임기준서 2. 클레임관리 내역 (1개만 있어도 만점)", is_editable=False)
+            with st.expander(f"4. 출고 및 구매관리 [총 3개 항목 / {get_completed_count(exp_dist4_prefixes)}개 완료]", expanded=True):
+                dist_data["[유통] (1) 출고관리"] = render_upload_block("(1) 출고관리 (배점 10점)", "df13", "제출 서류: 수불관리 이력 (출고관리일지 등) / 기준: 유통기한 또는 Lot별 관리 여부")
+                dist_data["[유통] (2) 구매 업체 관리"] = render_upload_block("(2) 구매 업체 관리 (배점 5점)", "df14", "제출 서류: 구매관리기준서, 협력업체 관리 기준, 점검 내역 중 1 / 기준: 협력사 관리 여부 (1개만 있어도 만점)")
+                dist_data["[유통] (3) 클레임/반품관리"] = render_upload_block("(3) 클레임/반품관리 (배점 10점)", "df15", "제출 서류: 클레임기준서 또는 클레임관리 내역 / 기준: 클레임 및 부적합 관리 여부 (1개만 있어도 만점)")
 
     # ----------------------------------------
     # 탭 3: 검사내용 시트
     # ----------------------------------------
     mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
-    mfg_coa_file, dist_coa_file = None, None
+    mfg_coa_files, dist_coa_files = [], []
     mfg_coa_na, dist_coa_na = False, False
     mfg_coa_na_reason, dist_coa_na_reason = "", ""
     
@@ -459,7 +489,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 mfg_coa_na = st.checkbox("해당사항 없음 (N/A) - 검사성적서", key="mfg_coa_na")
                 if mfg_coa_na:
                     mfg_coa_na_reason = st.text_input("검사성적서 해당사항 없음 사유:", key="mfg_coa_na_reason")
-                mfg_coa_file = st.file_uploader("위 표와 대조할 자가/공인 검사 성적서 원본 업로드", key="mdf_file", disabled=mfg_coa_na)
+                mfg_coa_files = st.file_uploader("위 표와 대조할 자가/공인 검사 성적서 원본 업로드 (다중 파일 가능)", key="mdf_file", accept_multiple_files=True, disabled=mfg_coa_na)
 
             if t5:
                 st.markdown("### [수입판매] COA 통관 검사 기준 입력")
@@ -467,7 +497,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 dist_coa_na = st.checkbox("해당사항 없음 (N/A) - COA", key="dist_coa_na")
                 if dist_coa_na:
                     dist_coa_na_reason = st.text_input("COA 해당사항 없음 사유:", key="dist_coa_na_reason")
-                dist_coa_file = st.file_uploader("위 표와 대조할 수입 COA 성적서 원본 업로드", key="ddf_file", disabled=dist_coa_na)
+                dist_coa_files = st.file_uploader("위 표와 대조할 수입 COA 성적서 원본 업로드 (다중 파일 가능)", key="ddf_file", accept_multiple_files=True, disabled=dist_coa_na)
 
     # ==========================================
     # 최종 통합 제출 버튼
@@ -510,16 +540,16 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     instant_logs.append({
                         "doc_name": doc_name, "criteria": data["criteria"],
                         "judgment": f"{max_score}점 (해당사항 없음)", "reason": f"해당사항 없음: {data['na_reason']}",
-                        "admin_score": f"{max_score}점 (해당사항 없음)", "file": None, "max_score": max_score
+                        "admin_score": f"{max_score}점 (해당사항 없음)", "file_links": "첨부파일 없음", "max_score": max_score
                     })
-                elif data["file"] is None:
+                elif not data["files"]:
                     instant_logs.append({
                         "doc_name": doc_name, "criteria": data["criteria"],
                         "judgment": "0점 (미제출)", "reason": "필수 파일 미제출 (누락)",
-                        "admin_score": "0점 (미제출)", "file": None, "max_score": max_score
+                        "admin_score": "0점 (미제출)", "file_links": "첨부파일 없음", "max_score": max_score
                     })
                 else:
-                    tasks.append({"doc_name": doc_name, "criteria": data["criteria"], "file": data["file"], "max_score": max_score})
+                    tasks.append({"doc_name": doc_name, "criteria": data["criteria"], "files": data["files"], "max_score": max_score})
                 return True
 
             if is_mfg:
@@ -537,17 +567,17 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                             instant_logs.append({
                                 "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
                                 "judgment": "통과 (해당사항 없음)", "reason": f"해당사항 없음: {mfg_coa_na_reason}",
-                                "admin_score": "통과 (해당사항 없음)", "file": None, "max_score": 0
+                                "admin_score": "통과 (해당사항 없음)", "file_links": "첨부파일 없음", "max_score": 0
                             })
-                    elif mfg_coa_file is None:
+                    elif not mfg_coa_files:
                         instant_logs.append({
                             "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
                             "judgment": "0점 (미제출)", "reason": "필수 검사성적서 미제출",
-                            "admin_score": "0점 (미제출)", "file": None, "max_score": 0
+                            "admin_score": "0점 (미제출)", "file_links": "첨부파일 없음", "max_score": 0
                         })
                     else:
                         grid_data = mfg_df.to_dict('records')
-                        tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "file": mfg_coa_file, "max_score": 0})
+                        tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "files": mfg_coa_files, "max_score": 0})
 
             if is_dist:
                 for doc_key, data in dist_data.items():
@@ -562,17 +592,17 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         instant_logs.append({
                             "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
                             "judgment": "통과 (해당사항 없음)", "reason": f"해당사항 없음: {dist_coa_na_reason}",
-                            "admin_score": "통과 (해당사항 없음)", "file": None, "max_score": 0
+                            "admin_score": "통과 (해당사항 없음)", "file_links": "첨부파일 없음", "max_score": 0
                         })
-                elif dist_coa_file is None:
+                elif not dist_coa_files:
                     instant_logs.append({
                         "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
                         "judgment": "0점 (미제출)", "reason": "필수 COA 성적서 미제출",
-                        "admin_score": "0점 (미제출)", "file": None, "max_score": 0
+                        "admin_score": "0점 (미제출)", "file_links": "첨부파일 없음", "max_score": 0
                     })
                 else:
                     grid_data = dist_df.to_dict('records')
-                    tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "file": dist_coa_file, "max_score": 0})
+                    tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "files": dist_coa_files, "max_score": 0})
 
             if not validation_failed:
                 if not tasks and not instant_logs:
@@ -586,6 +616,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     
                     total_earned = 0
                     total_max = 0
+                    pass_count = 0
+                    fail_count = 0
+                    na_count = 0
 
                     current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                     formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -598,26 +631,34 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         if "해당사항 없음" in log["judgment"] or "통과" in log["judgment"]:
                             total_earned += ms
                             total_max += ms
+                            pass_count += 1
+                            if "해당사항 없음" in log["reason"]:
+                                na_count += 1
                         else:
                             total_max += ms
+                            fail_count += 1
                         
-                        row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], "첨부파일 없음", manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
+                        row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], log["file_links"], manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
                         append_to_google_sheet(row_data)
                         my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 처리 중...")
 
                     for task in tasks:
                         current_idx += 1
                         doc_name = task["doc_name"]
-                        file_obj = task["file"]
+                        files_list = task["files"]
                         criteria = task["criteria"]
                         ms = task["max_score"]
 
                         try:
-                            unique_id = f"{company_name}_{doc_name}_{current_time_str}"
-                            file_name = f"{unique_id}_{file_obj.name}"
-                            file_buffer = io.BytesIO(file_obj.getvalue())
-
-                            drive_link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
+                            drive_links = []
+                            for f_idx, file_obj in enumerate(files_list):
+                                unique_id = f"{company_name}_{doc_name}_{current_time_str}_{f_idx}"
+                                file_name = f"{unique_id}_{file_obj.name}"
+                                file_buffer = io.BytesIO(file_obj.getvalue())
+                                link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
+                                drive_links.append(link)
+                            
+                            drive_link_str = " | ".join(drive_links)
                             
                             if ms == 0:
                                 eval_instructions = """
@@ -636,21 +677,19 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                                 상세사유: (문서에서 발견한 팩트 수치를 근거로 사유 기재)
                                 """
                             
-                            prompt = f"""당신은 엄격한 식품안전 품질 심사관입니다.
+                            prompt = f"""당신은 식품안전 서류 확인 시스템입니다.
                             [평가 대상 업체 정보]
-                            - 신고된 영업의 종류: {biz_type}
                             - 납품 예정 품목: {delivered_items}
 
                             [심사항목]: {doc_name}
-                            [평가 기준 및 방법]: {criteria}
+                            [평가 기준 및 필수 제출 서류]: {criteria}
 
                             지시사항:
-                            1. 제출된 문서를 스캔하여 [평가 기준 및 방법]에 명시된 요건을 완벽히 충족하는지 대조하십시오.
-                            2. [특별 지시] 심사항목이 '영업신고' 관련이거나 '품목제조보고'일 경우, 서류에 기재된 업종이 '{biz_type}'과 일치하는지 확인하고, 취급 품목이 '{delivered_items}'와 연관이 있는지 교차 검증하십시오. 불일치 시 최하점(부적합) 처리하십시오.
-                            3. 기준에 '(1개만 있어도 만점)'이 명시된 경우, 여러 서류 중 하나만 제출되어도 완벽한 것으로 간주합니다.
+                            1. 제출된 모든 문서(다중 파일)를 종합적으로 스캔하여 [평가 기준 및 필수 제출 서류]에 명시된 요건이 존재하는지 대조하십시오.
+                            2. 기준에 '(1개만 있어도 만점)'이 명시된 경우, 여러 서류 중 하나만 제출되어도 완벽한 것으로 간주합니다.
                             {eval_instructions}"""
 
-                            judgment, reason, admin_score = analyze_document_with_ai(prompt, file_obj.getvalue(), file_obj.type)
+                            judgment, reason, admin_score = analyze_documents_with_ai(prompt, files_list)
 
                             if ms > 0:
                                 match = re.search(r'(\d+)점', judgment)
@@ -658,8 +697,17 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                                 earned = min(earned, ms)
                                 total_earned += earned
                                 total_max += ms
+                                if earned == ms:
+                                    pass_count += 1
+                                else:
+                                    fail_count += 1
+                            else:
+                                if "통과" in judgment:
+                                    pass_count += 1
+                                else:
+                                    fail_count += 1
 
-                            row_data = [unique_id, formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
+                            row_data = [f"{company_name}_{doc_name}_{current_time_str}", formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link_str, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
                             append_to_google_sheet(row_data)
 
                         except Exception as e:
@@ -845,12 +893,14 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                         st.info(f"[{selected_info_company}] 담당자명: {contact_manager} | 이메일: {contact_email}")
                         
                         display_df = comp_df
-                        zero_score_df = comp_df[~comp_df['관리자최종점수'].str.contains("만점|통과|8점|10점|15점", na=False, regex=True)]
+                        zero_score_df = comp_df[comp_df.apply(is_deducted, axis=1)]
                         na_score_df = comp_df[comp_df['관리자최종점수'].str.contains("해당사항 없음", na=False)]
+                        passed_score_df = comp_df[comp_df.apply(is_passed, axis=1)]
                     else:
                         display_df = filtered_df
-                        zero_score_df = filtered_df[~filtered_df['관리자최종점수'].str.contains("만점|통과|8점|10점|15점", na=False, regex=True)]
+                        zero_score_df = filtered_df[filtered_df.apply(is_deducted, axis=1)]
                         na_score_df = filtered_df[filtered_df['관리자최종점수'].str.contains("해당사항 없음", na=False)]
+                        passed_score_df = filtered_df[filtered_df.apply(is_passed, axis=1)]
                     
                     st.markdown("---")
 
@@ -897,14 +947,16 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                         
                         if target_id != "선택하세요":
                             target_row = zero_score_df[zero_score_df['고유ID'] == target_id].iloc[0]
-                            drive_url = target_row.get('드라이브링크', '#')
+                            drive_url = str(target_row.get('드라이브링크', '#'))
                             doc_name_zero = str(target_row.get('심사항목', ''))
                             max_score_zero = DOC_MAX_SCORES.get(doc_name_zero, 0)
                             
                             st.error(f"[감점 처리 사유] {target_row.get('AI상세사유', '사유 없음')}")
                             
-                            if drive_url != "첨부파일 없음":
-                                st.markdown(f"**[제출된 파일 직접 확인하기 (클릭 시 새 창 열림)]({drive_url})**")
+                            if drive_url and drive_url != "첨부파일 없음":
+                                urls = drive_url.split(" | ")
+                                for i, url in enumerate(urls, 1):
+                                    st.markdown(f"**[제출된 파일 {i} 직접 확인하기 (새 창 열림)]({url})**")
                             else:
                                 st.warning("[주의] 미제출로 인해 첨부된 파일이 없습니다.")
                             
@@ -922,17 +974,57 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                                     st.rerun()
 
                     st.markdown("---")
+
+                    st.markdown("### 7. 관리자 육안 검토 (만점/통과 서류 퀄리티 검증)")
+                    
+                    if passed_score_df.empty:
+                        if selected_info_company != "전체 보기":
+                            st.success(f"[알림] [{selected_info_company}] 업체는 육안으로 재확인할 만점/통과 서류가 없습니다.")
+                        else:
+                            st.success("[알림] 필터링된 기간 내 전체 업체 중 육안으로 재확인할 만점/통과 서류가 없습니다.")
+                    else:
+                        target_pass_id = st.selectbox("품질을 검증할 고유ID를 선택하세요 (만점 서류 검토용):", ["선택하세요"] + passed_score_df['고유ID'].tolist())
+                        
+                        if target_pass_id != "선택하세요":
+                            target_pass_row = passed_score_df[passed_score_df['고유ID'] == target_pass_id].iloc[0]
+                            drive_url_pass = str(target_pass_row.get('드라이브링크', '#'))
+                            doc_name_pass = str(target_pass_row.get('심사항목', ''))
+                            max_score_pass = DOC_MAX_SCORES.get(doc_name_pass, 0)
+                            
+                            st.info(f"[AI 통과 사유] {target_pass_row.get('AI상세사유', '사유 없음')}")
+                            
+                            if drive_url_pass and drive_url_pass != "첨부파일 없음":
+                                urls_pass = drive_url_pass.split(" | ")
+                                for i, url in enumerate(urls_pass, 1):
+                                    st.markdown(f"**[제출된 파일 {i} 직접 확인하기 (새 창 열림)]({url})**")
+                            else:
+                                st.warning("[주의] 미제출로 인해 첨부된 파일이 없습니다.")
+                            
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            col_p1, col_p2 = st.columns(2)
+                            with col_p1:
+                                new_pass_status = st.selectbox("수정할 점수를 선택하세요:", [f"{max_score_pass}점 (만점 유지 - 서류 적합함)", "0점 (관리자 최종 반려 - 서류 부실/허위)"])
+                            with col_p2:
+                                pass_admin_memo = st.text_input("수정 사유 입력 (선택):", key="pass_memo")
+
+                            if st.button("검증 결과 구글 시트 반영", key="pass_btn"):
+                                memo_text = f"{new_pass_status} / 사유: {pass_admin_memo}" if pass_admin_memo else new_pass_status
+                                if update_google_sheet_admin_score(target_pass_id, memo_text) == True:
+                                    st.success(f"해당 건의 최종 점수가 성공적으로 수정되었습니다.")
+                                    st.rerun()
+
+                    st.markdown("---")
                     
                     if selected_info_company != "전체 보기":
-                        st.markdown(f"### 7. [{selected_info_company}] 전체 심사 이력")
+                        st.markdown(f"### 8. [{selected_info_company}] 전체 심사 이력")
                     else:
-                        st.markdown("### 7. 실시간 전체 심사 이력 (필터링됨)")
+                        st.markdown("### 8. 실시간 전체 심사 이력 (필터링됨)")
                         
                     st.dataframe(
                         display_df, 
                         use_container_width=True,
                         column_config={
-                            "드라이브링크": st.column_config.LinkColumn("드라이브링크")
+                            "드라이브링크": st.column_config.TextColumn("드라이브링크 ( | 로 구분됨)")
                         }
                     )
         except Exception as e:
