@@ -632,7 +632,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 max_score = DOC_MAX_SCORES.get(doc_name, 0)
                 if data["is_na"]:
                     if not data["na_reason"]:
-                        st.error(f"[오류] '{doc_name}'의 해당사항 없음 사유를 입력해 주십시오.")
+                        st.error(f"[누락 알림] '{doc_name}'의 해당사항 없음 사유를 입력해 주십시오.")
                         return False
                     instant_logs.append({
                         "doc_name": doc_name, "criteria": data["criteria"],
@@ -640,11 +640,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         "admin_score": f"{max_score}점 (해당사항 없음)", "file_links": "첨부파일 없음", "max_score": max_score
                     })
                 elif not data["files"]:
-                    instant_logs.append({
-                        "doc_name": doc_name, "criteria": data["criteria"],
-                        "judgment": "0점 (미제출)", "reason": "필수 파일 미제출 (누락)",
-                        "admin_score": "0점 (미제출)", "file_links": "첨부파일 없음", "max_score": max_score
-                    })
+                    st.error(f"[누락 알림] '{doc_name}' 파일이 제출되지 않았습니다. 해당사항이 없으시면 '해당사항 없음 (N/A)'을 체크하시고 사유를 써주세요.")
+                    return False
                 else:
                     tasks.append({"doc_name": doc_name, "criteria": data["criteria"], "files": data["files"], "max_score": max_score})
                 return True
@@ -658,7 +655,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 if t1 or t3 or t6:
                     if mfg_coa_na:
                         if not mfg_coa_na_reason:
-                            st.error("[오류] 제조/국내유통 검사성적서의 해당사항 없음 사유를 입력해 주십시오.")
+                            st.error("[누락 알림] 제조/국내유통 검사성적서의 해당사항 없음 사유를 입력해 주십시오.")
                             validation_failed = True
                         else:
                             instant_logs.append({
@@ -667,11 +664,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                                 "admin_score": "통과 (해당사항 없음)", "file_links": "첨부파일 없음", "max_score": 0
                             })
                     elif not mfg_coa_files:
-                        instant_logs.append({
-                            "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
-                            "judgment": "0점 (미제출)", "reason": "필수 검사성적서 미제출",
-                            "admin_score": "0점 (미제출)", "file_links": "첨부파일 없음", "max_score": 0
-                        })
+                        st.error("[누락 알림] '[제조/국내유통] 자가검사성적서' 파일이 제출되지 않았습니다. 해당사항이 없으시면 '해당사항 없음 (N/A)'을 체크하시고 사유를 써주세요.")
+                        validation_failed = True
                     else:
                         grid_data = mfg_df.to_dict('records')
                         tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "files": mfg_coa_files, "max_score": 0})
@@ -683,7 +677,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     
                 if dist_coa_na:
                     if not dist_coa_na_reason:
-                        st.error("[오류] 수입 COA 성적서의 해당사항 없음 사유를 입력해 주십시오.")
+                        st.error("[누락 알림] 수입 COA 성적서의 해당사항 없음 사유를 입력해 주십시오.")
                         validation_failed = True
                     else:
                         instant_logs.append({
@@ -692,11 +686,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                             "admin_score": "통과 (해당사항 없음)", "file_links": "첨부파일 없음", "max_score": 0
                         })
                 elif not dist_coa_files:
-                    instant_logs.append({
-                        "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
-                        "judgment": "0점 (미제출)", "reason": "필수 COA 성적서 미제출",
-                        "admin_score": "0점 (미제출)", "file_links": "첨부파일 없음", "max_score": 0
-                    })
+                    st.error("[누락 알림] '[수입판매] COA 성적서' 파일이 제출되지 않았습니다. 해당사항이 없으시면 '해당사항 없음 (N/A)'을 체크하시고 사유를 써주세요.")
+                    validation_failed = True
                 else:
                     grid_data = dist_df.to_dict('records')
                     tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "files": dist_coa_files, "max_score": 0})
