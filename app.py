@@ -215,10 +215,9 @@ def get_completed_count(prefixes):
 
 def is_deducted(row):
     score_str = str(row.get('관리자최종점수', '0점'))
-    if "해당사항 없음" in score_str: 
-        return False
-    if "만점" in score_str or "통과" in score_str: 
-        return False
+    if "해당사항 없음" in score_str: return False
+    if "만점" in score_str or "통과" in score_str: return False
+    if "최종확정" in score_str: return False
     
     doc_name = str(row.get('심사항목', ''))
     max_score = DOC_MAX_SCORES.get(doc_name, 0)
@@ -226,14 +225,13 @@ def is_deducted(row):
     if max_score > 0:
         match = re.search(r'(\d+)점', score_str)
         earned = int(match.group(1)) if match else 0
-        if earned >= max_score: 
-            return False
+        if earned >= max_score: return False
     return True
 
 def is_passed(row):
     score_str = str(row.get('관리자최종점수', '0점'))
-    if "해당사항 없음" in score_str:
-        return False
+    if "해당사항 없음" in score_str: return False
+    if "최종확정" in score_str: return True
         
     doc_name = str(row.get('심사항목', ''))
     max_score = DOC_MAX_SCORES.get(doc_name, 0)
@@ -1290,6 +1288,8 @@ elif menu == "관리자 업체관리 (메일 발송)":
                         score_str = str(row.get('관리자최종점수', '0점'))
                         if "해당사항 없음" in score_str: return False
                         if "만점" in score_str or "통과" in score_str: return False
+                        if "최종확정" in score_str: return False
+                        
                         doc_name = str(row.get('심사항목', ''))
                         max_score = DOC_MAX_SCORES.get(doc_name, 0)
                         if max_score > 0:
@@ -1301,15 +1301,37 @@ elif menu == "관리자 업체관리 (메일 발송)":
                     zero_score_df_all = log_df[log_df.apply(is_deducted_mail, axis=1)]
                     
                     if zero_score_df_all.empty:
-                        st.info("현재 미비 서류(감점)가 존재하는 업체가 없습니다.")
+                        st.info("현재 보완을 요청할 미비 서류(감점)가 존재하는 대기 업체가 없습니다.")
                     else:
                         target_comp_mail = st.selectbox("보완 요청을 보낼 업체를 선택하세요:", ["선택하세요"] + list(zero_score_df_all['업체명'].unique()))
                         
                         if target_comp_mail != "선택하세요":
-                            comp_zero_df = zero_score_df_all[zero_score_df_all['업체명'] == target_comp_mail]
-                            target_email = email_dict.get(target_comp_mail, "")
+                            comp_all_df = log_df[log_df['업체명'] == target_comp_mail]
                             
-                            st.text_input("수신자 이메일 (해당 업체):", value=target_email, disabled=True)
+                            total_earned = 0
+                            total_max = 0
+                            for idx, record in comp_all_df.iterrows():
+                                doc_name = str(record.get('심사항목', ''))
+                                max_score = DOC_MAX_SCORES.get(doc_name, 0)
+                                admin_score_str = str(record.get('관리자최종점수', '0점'))
+                                if max_score > 0:
+                                    total_max += max_score
+                                    match = re.search(r'(\d+)점', admin_score_str)
+                                    earned = int(match.group(1)) if match else 0
+                                    earned = min(earned, max_score)
+                                    total_earned += earned
+                            
+                            score = int((total_earned / total_max) * 100) if total_max > 0 else 0
+                            if score >= 85: grade = "승 인"
+                            elif score >= 70: grade = "지 도"
+                            else: grade = "등급 외"
+
+                            st.info(f"📊 **[{target_comp_mail}] 현재 평가 요약** : 환산 총점 **{score}점** (예상 등급: **{grade}**)")
+                            
+                            comp_zero_df = zero_score_df_all[zero_score_df_all['업체명'] == target_comp_mail]
+                            target_email_default = email_dict.get(target_comp_mail, "")
+                            
+                            final_target_email = st.text_input("수신자 이메일 (직접 수정 가능):", value=target_email_default)
                             
                             mail_subject_req = st.text_input("메일 제목 (보완 요청):", value=f"[연세유업 아산공장] {target_comp_mail} 서류 심사 미비 항목 보완 요청")
                             
@@ -1322,14 +1344,29 @@ elif menu == "관리자 업체관리 (메일 발송)":
                             mail_body_req = st.text_area("메일 내용 (보완 요청):", value=default_req_body, height=300)
 
                             if st.button("해당 업체로 보완 요청 메일 발송", type="primary"):
-                                if not target_email:
+                                if not final_target_email:
                                     st.error("해당 업체의 이메일 정보가 존재하지 않습니다.")
                                 else:
-                                    success, msg = send_email(target_email, mail_subject_req, mail_body_req.replace('\n', '<br>'))
+                                    success, msg = send_email(final_target_email, mail_subject_req, mail_body_req.replace('\n', '<br>'))
                                     if success:
-                                        st.success(f"{target_comp_mail} 담당자({target_email})에게 메일 발송을 완료했습니다.")
+                                        st.success(f"{target_comp_mail} 담당자({final_target_email})에게 메일 발송을 완료했습니다.")
                                     else:
-                                        st.error(f"[발송 실패 진단] {target_email} : {msg}")
+                                        st.error(f"[발송 실패 진단] {final_target_email} : {msg}")
+                                        
+                            st.markdown("---")
+                            st.markdown("#### 🏁 심사 완료 처리")
+                            st.caption("해당 업체와 메일 송수신 및 미비 서류 보완이 완전히 끝났거나, 예외적으로 이대로 심사를 마감할 경우 아래 버튼을 누르십시오. 확정 처리된 업체는 더 이상 보완 대기 목록에 나타나지 않습니다.")
+                            
+                            if st.button("✅ 이 업체의 심사 최종 확정 (보완 요청 대기 목록에서 영구 숨기기)"):
+                                with st.spinner("최종 확정 처리 중..."):
+                                    for idx, row in comp_zero_df.iterrows():
+                                        uid = row['고유ID']
+                                        current_score = str(row['관리자최종점수'])
+                                        if "최종확정" not in current_score:
+                                            new_score = current_score + " (최종확정)"
+                                            update_google_sheet_admin_score(uid, new_score)
+                                st.success(f"{target_comp_mail} 업체의 심사가 최종 확정되어 대기 목록에서 제외되었습니다.")
+                                st.rerun()
 
         except Exception as e:
             st.error(f"[오류] 데이터베이스 연결 실패: {e}")
