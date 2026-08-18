@@ -295,8 +295,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     
     st.error("🚨 **절대 주의:** 작성 도중 브라우저 '뒤로 가기' 및 '새로고침(F5)'을 누르시면 첨부하신 모든 파일과 내용이 즉시 초기화됩니다.")
 
-    with st.expander("🤖 [안내] 서류 제출 기준 및 지침 문의 챗봇 (클릭하여 질문하기)", expanded=False):
-        st.info("💡 24시간 언제든 서류 제출 기준을 팩트로 답변해 드립니다.")
+    # 💡 챗봇 시인성 초강력 강화
+    st.success("### 🆘 서류 제출이 헷갈리시나요? 아래 챗봇에게 즉시 물어보세요!\n담당자 문의 전, 제출 규정에 맞춘 정확한 가이드를 24시간 팩트로 답변해 드립니다.")
+    with st.expander("👉 💬 [클릭] 연세유업 서류 제출 1:1 맞춤형 챗봇 열기", expanded=False):
         if "messages" not in st.session_state:
             st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다. 궁금하신 내용을 질문해 주십시오."}]
         for msg in st.session_state.messages:
@@ -361,18 +362,19 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             biz_type = st.text_input("영업의 종류 (보고서 '구분' 란에 표기됨):")
             delivered_items = st.text_input("납품 품목 (예: 우유팩, 탈지분유 등):")
 
-        st.markdown("### Ⅱ. 거래 형태 (복수선택 가능)")
-        st.caption("[주의] 2가지 이상 납품 시 모두 체크하셔야 해당 폼이 활성화됩니다.")
-        col_t1, col_t2, col_t3 = st.columns(3)
-        with col_t1:
-            t1 = st.checkbox("원재료(제조)")
-            t4 = st.checkbox("세제류 외(제조)")
-        with col_t2:
-            t2 = st.checkbox("부자재(제조)")
-            t5 = st.checkbox("수입판매")
-        with col_t3:
-            t3 = st.checkbox("OEM")
-            t6 = st.checkbox("국내유통(미제조)")
+        # 💡 거래 형태 단일 선택(라디오 버튼) 및 가이드라인 개선
+        st.markdown("### Ⅱ. 거래 형태 (단일 선택)")
+        st.info("💡 **[안내] 귀사가 연세유업에 납품하는 주된 거래 형태를 딱 1개만 선택해 주십시오.**\n(예: 자사에서 원재료와 부자재를 모두 취급하더라도, 연세유업에 납품하는 품목이 '부자재'라면 '부자재(제조)' 하나만 선택하시면 됩니다.)")
+        
+        transaction_options = ["선택하세요", "원재료(제조)", "부자재(제조)", "OEM", "세제류 외(제조)", "수입판매", "국내유통(미제조)"]
+        transaction_type = st.radio("거래 형태 선택", transaction_options, horizontal=True, label_visibility="collapsed")
+        
+        t1 = transaction_type == "원재료(제조)"
+        t2 = transaction_type == "부자재(제조)"
+        t3 = transaction_type == "OEM"
+        t4 = transaction_type == "세제류 외(제조)"
+        t5 = transaction_type == "수입판매"
+        t6 = transaction_type == "국내유통(미제조)"
 
         is_mfg = t1 or t2 or t3 or t4
         is_dist = t5 or t6
@@ -602,7 +604,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     mfg_coa_na_reason, dist_coa_na_reason = "", ""
     
     with tab3:
-        if not is_mfg and not is_dist:
+        if transaction_type == "선택하세요":
             st.info("[안내] [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
         elif not requires_inspection_sheet:
             st.success("[안내] 귀하의 거래 형태(부자재 또는 세제류 외)는 매뉴얼 규정에 따라 [검사내용 시트] 작성이 면제됩니다. 하단의 최종 제출 버튼을 눌러주십시오.")
@@ -683,8 +685,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         if company_name == "선택하세요":
             st.error("[오류] 공통 시트 탭에서 업체명을 반드시 선택해 주십시오.")
             validation_failed = True
-        elif not is_mfg and not is_dist:
-            st.error("[오류] 공통 시트 탭에서 거래 형태를 최소 1개 이상 선택해 주십시오.")
+        elif transaction_type == "선택하세요":
+            st.error("[오류] 공통 시트 탭에서 거래 형태를 1개 선택해 주십시오.")
             validation_failed = True
 
         if not validation_failed:
