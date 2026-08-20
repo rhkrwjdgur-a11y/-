@@ -278,7 +278,7 @@ def send_email(to_email, subject, body, attachment_file=None):
         return False, str(e)
 
 # ==========================================
-# [3] 사이드바 메뉴
+# [3] 사이드바 메뉴 및 챗봇 고정 배치
 # ==========================================
 st.sidebar.title("시스템 메뉴")
 menu = st.sidebar.radio("접속 화면을 선택하세요", [
@@ -287,63 +287,71 @@ menu = st.sidebar.radio("접속 화면을 선택하세요", [
     "관리자 업체관리 (메일 발송)"
 ])
 
+# 사이드바 하단 챗봇 영역 (업체 제출 화면에서만 활성화)
+if menu == "업체 서류 일괄 제출 (AI 검증)":
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### [안내] 서류 제출 가이드 챗봇")
+    st.sidebar.info("서류 제출이 헷갈리시나요?\n담당자 문의 전, 챗봇에게 즉시 물어보십시오.")
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다. 궁금하신 내용을 질문해 주십시오."}]
+    
+    chat_container = st.sidebar.container(height=450)
+    with chat_container:
+        for msg in st.session_state.messages:
+            st.chat_message(msg["role"]).write(msg["content"])
+            
+    if prompt := st.sidebar.chat_input("질문을 입력하세요..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with chat_container:
+            st.chat_message("user").write(prompt)
+        
+        try:
+            client = get_gemini_client()
+
+            sys_ctx = """
+            당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
+            당신의 임무는 협력업체 담당자의 질문에 직접, 구체적이고, 팩트 기반으로 답변하는 것입니다. 
+            절대 "담당자에게 이메일로 문의하라"고 회피하지 말고, 아래의 시스템 규정을 바탕으로 직접 안내하십시오.
+
+            [시스템 제출 규정 및 가이드라인]
+            1. 거래 형태별 작성 대상:
+               - 원재료(제조) / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 전체 작성 대상이며, [검사내용시트] 작성 대상입니다(성적서 수치 대조).
+               - 부자재(제조) / 세제류 외(제조): [개별시트] 불필요 항목이 자동 제외된 폼만 작성하며, [검사내용시트] 작성은 규정에 따라 면제됩니다.
+               - 수입판매: [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다(COA 통관 기준).
+               - 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다.
+            2. 증빙 자료 업로드 원칙:
+               - 항목별로 1개 이상의 필수 파일을 업로드해야 합니다. 다중 파일 업로드가 가능합니다.
+               - '1개만 있어도 만점'이라고 명시된 항목은 여러 서류 중 하나만 제출해도 인정됩니다.
+               - 해당사항이 없는 경우 '해당사항 없음(N/A)'을 체크하고 반드시 타당한 사유를 텍스트로 입력해야 합니다. 사유가 부실하면 관리자 검토 시 반려 처리됩니다.
+            3. 검사내용 시트 작성법:
+               - 업로드할 '자가/공인 검사 성적서' 또는 '수입 COA' 원본을 보고, 주요 검사항목, 법적/통관 기준, 실제 검사 결과값을 표에 직접 입력해야 합니다.
+               - 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
+            4. 시스템 이용 순서:
+               - [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후, 맨 아래 '모든 시트 작성 완료 및 최종 일괄 제출' 버튼을 클릭해야 완료됩니다.
+
+            [기본 연락처 및 문의 안내 지침]
+            - 담당자: 식품안전팀 곽정혁
+            - 이메일: rhkrwjdgur@yonseidairy.com
+            - 전화번호 안내는 절대 하지 마십시오. 시스템 오류 등 AI가 도저히 해결할 수 없는 중대한 문제에 한해서만 이메일 문의를 안내하십시오.
+            """
+
+            resp = client.models.generate_content(
+                model=GEMINI_MODEL_CHAT,
+                contents=sys_ctx + "\n질문: " + prompt,
+            )
+            st.session_state.messages.append({"role": "assistant", "content": resp.text})
+            st.rerun()
+        except Exception as e:
+            st.sidebar.error(f"[오류] 챗봇 응답 실패: {e}")
+
 # ==========================================
 # [4] 업체 서류 일괄 제출 화면
 # ==========================================
 if menu == "업체 서류 일괄 제출 (AI 검증)":
     st.title("협력업체 서류 심사 일괄 제출 시스템")
     
-    st.error("🚨 **절대 주의:** 작성 도중 브라우저 '뒤로 가기' 및 '새로고침(F5)'을 누르시면 첨부하신 모든 파일과 내용이 즉시 초기화됩니다.")
-
-    # 💡 챗봇 시인성 초강력 강화
-    st.success("### 서류 제출이 헷갈리시나요? 아래 챗봇에게 즉시 물어보세요!\n담당자 문의 전, 제출 규정에 맞춘 정확한 가이드를 24시간 답변해 드립니다.")
-    with st.expander("👉 💬 [클릭] 연세유업 서류 제출 1:1 맞춤형 챗봇 열기", expanded=False):
-        if "messages" not in st.session_state:
-            st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다. 궁금하신 내용을 질문해 주십시오."}]
-        for msg in st.session_state.messages:
-            st.chat_message(msg["role"]).write(msg["content"])
-        if prompt := st.chat_input("질문을 입력하세요..."):
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            st.chat_message("user").write(prompt)
-            try:
-                client = get_gemini_client()
-
-                sys_ctx = """
-                당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
-                당신의 임무는 협력업체 담당자의 질문에 직접, 구체적이고, 팩트 기반으로 답변하는 것입니다. 
-                절대 "담당자에게 이메일로 문의하라"고 회피하지 말고, 아래의 시스템 규정을 바탕으로 직접 안내하십시오.
-
-                [시스템 제출 규정 및 가이드라인]
-                1. 거래 형태별 작성 대상:
-                   - 원재료(제조) / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 전체 작성 대상이며, [검사내용시트] 작성 대상입니다(성적서 수치 대조).
-                   - 부자재(제조) / 세제류 외(제조): [개별시트] 불필요 항목이 자동 제외된 폼만 작성하며, [검사내용시트] 작성은 규정에 따라 면제됩니다.
-                   - 수입판매: [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다(COA 통관 기준).
-                   - 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다.
-                2. 증빙 자료 업로드 원칙:
-                   - 항목별로 1개 이상의 필수 파일을 업로드해야 합니다. 다중 파일 업로드가 가능합니다.
-                   - '1개만 있어도 만점'이라고 명시된 항목은 여러 서류 중 하나만 제출해도 인정됩니다.
-                   - 해당사항이 없는 경우 '해당사항 없음(N/A)'을 체크하고 반드시 타당한 사유를 텍스트로 입력해야 합니다. 사유가 부실하면 관리자 검토 시 반려 처리됩니다.
-                3. 검사내용 시트 작성법:
-                   - 업로드할 '자가/공인 검사 성적서' 또는 '수입 COA' 원본을 보고, 주요 검사항목, 법적/통관 기준, 실제 검사 결과값을 표에 직접 입력해야 합니다.
-                   - 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
-                4. 시스템 이용 순서:
-                   - [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후, 맨 아래 '모든 시트 작성 완료 및 최종 일괄 제출' 버튼을 클릭해야 완료됩니다.
-
-                [기본 연락처 및 문의 안내 지침]
-                - 담당자: 식품안전팀 곽정혁
-                - 이메일: rhkrwjdgur@yonseidairy.com
-                - 전화번호 안내는 절대 하지 마십시오. 시스템 오류 등 AI가 도저히 해결할 수 없는 중대한 문제에 한해서만 이메일 문의를 안내하십시오.
-                """
-
-                resp = client.models.generate_content(
-                    model=GEMINI_MODEL_CHAT,
-                    contents=sys_ctx + "\n질문: " + prompt,
-                )
-                st.session_state.messages.append({"role": "assistant", "content": resp.text})
-                st.chat_message("assistant").write(resp.text)
-            except Exception as e:
-                st.error(f"[오류] 챗봇 응답 실패: {e}")
-
+    st.error("[절대 주의] 작성 도중 브라우저 '뒤로 가기' 및 '새로고침(F5)'을 누르시면 첨부하신 모든 파일과 내용이 즉시 초기화됩니다.")
     st.info("[안내] 작성 방법: [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후 맨 아래 [최종 일괄 제출] 버튼을 누르십시오.")
 
     tab1, tab2, tab3 = st.tabs(["공통 시트", "개별 시트", "검사내용 시트"])
@@ -362,9 +370,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             biz_type = st.text_input("영업의 종류 (보고서 '구분' 란에 표기됨):")
             delivered_items = st.text_input("납품 품목 (예: 우유팩, 탈지분유 등):")
 
-        # 💡 거래 형태 단일 선택(라디오 버튼) 및 가이드라인 개선
         st.markdown("### Ⅱ. 거래 형태 (단일 선택)")
-        st.info("💡 **[안내] 귀사가 연세유업에 납품하는 주된 거래 형태를 딱 1개만 선택해 주십시오.**\n(예: 자사에서 원재료와 부자재를 모두 취급하더라도, 연세유업에 납품하는 품목이 '부자재'라면 '부자재(제조)' 하나만 선택하시면 됩니다.)")
+        st.info("[안내] 귀사가 연세유업에 납품하는 주된 거래 형태를 딱 1개만 선택해 주십시오.\n(예: 자사에서 원재료와 부자재를 모두 취급하더라도, 연세유업에 납품하는 품목이 '부자재'라면 '부자재(제조)' 하나만 선택하시면 됩니다.)")
         
         transaction_options = ["선택하세요", "원재료(제조)", "부자재(제조)", "OEM", "세제류 외(제조)", "수입판매", "국내유통(미제조)"]
         transaction_type = st.radio("거래 형태 선택", transaction_options, horizontal=True, label_visibility="collapsed")
@@ -455,9 +462,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp1_total = len(exp1_prefixes)
             with st.expander(f"1. 서류관리 [총 {exp1_total}개 항목 / {exp1_completed}개 완료]", expanded=True):
                 if exp1_completed < exp1_total:
-                    st.error(f"🚨 현재 {exp1_total}개 항목 중 {exp1_total - exp1_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp1_total}개 항목 중 {exp1_total - exp1_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 mfg_data["[제조] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "mf1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)", is_editable=False)
                 mfg_data["[제조] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 3점)", "mf2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 사항 일치 및 유효기간 만료 여부", is_editable=False)
@@ -474,9 +481,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp2_total = len(exp2_prefixes)
             with st.expander(f"2. 환경 및 시설관리 [총 {exp2_total}개 항목 / {exp2_completed}개 완료]", expanded=True):
                 if exp2_completed < exp2_total:
-                    st.error(f"🚨 현재 {exp2_total}개 항목 중 {exp2_total - exp2_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp2_total}개 항목 중 {exp2_total - exp2_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 mfg_data["[제조] (1) 구분구획"] = render_upload_block("(1) 구분구획 (배점 3점)", "mf9", "제출 서류: 작업장 평면도 또는 설비 배치도 / 기준: 구획/구분 표시 여부 확인", is_editable=False)
                 mfg_data["[제조] (2) 환기/청정도"] = render_upload_block("(2) 환기/청정도 (배점 3점)", "mf10", "제출 서류: 낙하세균 검사 일지 등 / 기준: 낙하세균 검사 관리 여부", is_editable=False)
@@ -494,9 +501,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp3_total = len(exp3_prefixes)
             with st.expander(f"3. 방충방서관리 [총 {exp3_total}개 항목 / {exp3_completed}개 완료]", expanded=True):
                 if exp3_completed < exp3_total:
-                    st.error(f"🚨 현재 {exp3_total}개 항목 중 {exp3_total - exp3_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp3_total}개 항목 중 {exp3_total - exp3_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 mfg_data["[제조] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 3점)", "mf20", "제출 서류: 방충방서 소독 일지 또는 보고서 / 기준: 매월 정기 소독 기록 여부", is_editable=False)
 
@@ -507,9 +514,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp4_total = len(exp4_prefixes)
             with st.expander(f"4. 공정 및 규격관리 [총 {exp4_total}개 항목 / {exp4_completed}개 완료]", expanded=True):
                 if exp4_completed < exp4_total:
-                    st.error(f"🚨 현재 {exp4_total}개 항목 중 {exp4_total - exp4_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp4_total}개 항목 중 {exp4_total - exp4_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 if t1 or t3:
                     mfg_data["[제조] (1) 공정관리"] = render_upload_block("(1) 공정관리 (배점 8점)", "mf21", "제출 서류: 각 공정별 CCP 일지 / 기준: 한계기준 100% 충족 및 누락 없을 것", is_editable=False)
@@ -524,9 +531,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp5_total = len(exp5_prefixes)
             with st.expander(f"5. 작업자관리 [총 {exp5_total}개 항목 / {exp5_completed}개 완료]", expanded=True):
                 if exp5_completed < exp5_total:
-                    st.error(f"🚨 현재 {exp5_total}개 항목 중 {exp5_total - exp5_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp5_total}개 항목 중 {exp5_total - exp5_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 mfg_data["[제조] (1) 개인위생"] = render_upload_block("(1) 개인위생 (배점 3점)", "mf27", "제출 서류: 위생관리기준서 또는 개인위생관리일지 / 기준: 출입절차 및 위생 상태 양호 여부 (1개만 있어도 만점)", is_editable=False)
                 mfg_data["[제조] (2) 위생교육일지"] = render_upload_block("(2) 위생교육일지 (배점 3점)", "mf28", "제출 서류: 자체(내부) 정기 위생 교육일지 / 기준: 위생교육 주기적 실시 여부", is_editable=False)
@@ -544,9 +551,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp_dist1_total = len(exp_dist1_prefixes)
             with st.expander(f"1. 서류 관리 [총 {exp_dist1_total}개 항목 / {exp_dist1_completed}개 완료]", expanded=True):
                 if exp_dist1_completed < exp_dist1_total:
-                    st.error(f"🚨 현재 {exp_dist1_total}개 항목 중 {exp_dist1_total - exp_dist1_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp_dist1_total}개 항목 중 {exp_dist1_total - exp_dist1_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 dist_data["[유통] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "df1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)", is_editable=False)
                 dist_data["[유통] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 5점)", "df2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 유효기간 만료 여부 확인", is_editable=False)
@@ -561,9 +568,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp_dist2_total = len(exp_dist2_prefixes)
             with st.expander(f"2. 입고 및 보관 관리 [총 {exp_dist2_total}개 항목 / {exp_dist2_completed}개 완료]", expanded=True):
                 if exp_dist2_completed < exp_dist2_total:
-                    st.error(f"🚨 현재 {exp_dist2_total}개 항목 중 {exp_dist2_total - exp_dist2_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp_dist2_total}개 항목 중 {exp_dist2_total - exp_dist2_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 dist_data["[유통] (1) 입고관리"] = render_upload_block("(1) 입고관리 (배점 10점)", "df6", "제출 서류: 입고기준서(규격서) 또는 입고관리일지 / 기준: 자체 입고 기준 적합 여부 (1개만 있어도 만점)", is_editable=False)
                 dist_data["[유통] (2) 보관관리"] = render_upload_block("(2) 보관관리 (배점 15점)", "df7", "제출 서류: 보관관리 일지 (차량 타코메타 등) / 기준: 온도, 습도 등 적정 보관 기록 확인", is_editable=False)
@@ -576,9 +583,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp_dist3_total = len(exp_dist3_prefixes)
             with st.expander(f"3. 방충·방서관리 [총 {exp_dist3_total}개 항목 / {exp_dist3_completed}개 완료]", expanded=True):
                 if exp_dist3_completed < exp_dist3_total:
-                    st.error(f"🚨 현재 {exp_dist3_total}개 항목 중 {exp_dist3_total - exp_dist3_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp_dist3_total}개 항목 중 {exp_dist3_total - exp_dist3_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 dist_data["[유통] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 5점)", "df12", "제출 서류: 방충방서 소독 보고서 / 기준: 정기 소독 관리 여부", is_editable=False)
 
@@ -587,9 +594,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
             exp_dist4_total = len(exp_dist4_prefixes)
             with st.expander(f"4. 출고 및 구매관리 [총 {exp_dist4_total}개 항목 / {exp_dist4_completed}개 완료]", expanded=True):
                 if exp_dist4_completed < exp_dist4_total:
-                    st.error(f"🚨 현재 {exp_dist4_total}개 항목 중 {exp_dist4_total - exp_dist4_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
+                    st.error(f"[누락] 현재 {exp_dist4_total}개 항목 중 {exp_dist4_total - exp_dist4_completed}개가 미제출 상태입니다. (해당사항 없을 시 N/A 체크 및 사유 입력)")
                 else:
-                    st.success("✅ 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
+                    st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 dist_data["[유통] (1) 출고관리"] = render_upload_block("(1) 출고관리 (배점 10점)", "df13", "제출 서류: 수불관리 이력 (출고관리일지 등) / 기준: 유통기한 또는 Lot별 관리 여부", is_editable=False)
                 dist_data["[유통] (2) 구매 업체 관리"] = render_upload_block("(2) 구매 업체 관리 (배점 5점)", "df14", "제출 서류: 구매관리기준서, 협력업체 관리 기준, 점검 내역 중 1 / 기준: 협력사 관리 여부 (1개만 있어도 만점)", is_editable=False)
@@ -613,12 +620,12 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 st.markdown("### [제조/국내유통] 법적 기준 입력 및 성적서 대조")
                 
                 st.info("""
-                **[📋 작성 가이드]**
-                하단에 업로드하실 **'자가/공인 검사 성적서'** 원본을 기준으로, 핵심 검사항목과 법적 기준, 그리고 실제 검사 결과값을 표에 입력해 주십시오.
+                [작성 가이드]
+                하단에 업로드하실 '자가/공인 검사 성적서' 원본을 기준으로, 핵심 검사항목과 법적 기준, 그리고 실제 검사 결과값을 표에 입력해 주십시오.
                 입력하신 데이터는 첨부된 성적서와 1:1로 정밀하게 AI 교차 검증됩니다.
                 
-                *   **입력 안내:** 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
-                *   **행 추가 방법:** 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 입력 칸이 계속 추가됩니다.
+                - 입력 안내: 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
+                - 행 추가 방법: 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 입력 칸이 계속 추가됩니다.
                 """)
                 
                 mfg_df = st.data_editor(
@@ -645,10 +652,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 st.markdown("### [수입판매] COA 통관 검사 기준 입력")
                 
                 st.info("""
-                **[📋 작성 가이드]**
-                하단에 업로드하실 **'수입 COA 성적서'** 원본을 기준으로, 주요 검사항목과 통관 기준, 그리고 수입 시 실제 검사 결과값을 표에 입력해 주십시오.
-                *   **입력 안내:** 모든 세부 항목을 적기 어렵다면, 핵심 항목 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
-                *   **행 추가 방법:** 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 칸이 추가됩니다.
+                [작성 가이드]
+                하단에 업로드하실 '수입 COA 성적서' 원본을 기준으로, 주요 검사항목과 통관 기준, 그리고 수입 시 실제 검사 결과값을 표에 입력해 주십시오.
+                - 입력 안내: 모든 세부 항목을 적기 어렵다면, 핵심 항목 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
+                - 행 추가 방법: 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 칸이 추가됩니다.
                 """)
                 
                 dist_df = st.data_editor(
@@ -677,7 +684,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     st.markdown("<br><hr>", unsafe_allow_html=True)
     st.markdown("### 작성 완료 후 일괄 검증 제출")
     
-    st.error("🚨 **절대 주의:** 제출 버튼을 누른 후 서류 전송 및 AI 판독에 시간이 소요되니 완료 화면이 뜰 때까지 절대 브라우저를 닫거나 새로고침하지 마십시오.")
+    st.error("[절대 주의] 제출 버튼을 누른 후 서류 전송 및 AI 판독에 시간이 소요되니 완료 화면이 뜰 때까지 절대 브라우저를 닫거나 새로고침하지 마십시오.")
 
     if st.button("모든 시트 작성 완료 및 최종 일괄 제출 (AI 심사)", type="primary", use_container_width=True):
         validation_failed = False
@@ -1253,7 +1260,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
 ■ 시스템 접속 링크: https://9yhkkjjyezju9w5bxsdhxd.streamlit.app/
 
-💡 [안내] 시스템 내부에 '서류 제출 지침 문의 챗봇'이 마련되어 있습니다.
+[안내] 시스템 내부에 '서류 제출 지침 문의 챗봇'이 마련되어 있습니다.
 서류 업로드 시 궁금한 사항이나 기준이 헷갈리실 경우, 해당 챗봇에 적극적으로 문의하시면 즉각적인 가이드를 받으실 수 있습니다.
 또한, 첨부해 드린 매뉴얼을 참고하시어 원활한 서류 접수가 진행될 수 있도록 협조 부탁드립니다.
 
@@ -1280,7 +1287,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
                                 mail_bar.progress((i + 1) / len(email_list), text=f"{recipient} 발송 중...")
                                 
                             mail_bar.empty()
-                            st.success(f"총 {len(email_list)}개 중 {success_count}개의 이메일이 성공적으로 발송되었습니다.")
+                            st.success(f"[성공] 총 {len(email_list)}개 중 {success_count}개의 이메일이 성공적으로 발송되었습니다.")
 
                 with tab_mail2:
                     st.markdown("### 미비 서류 보완 요청 메일 발송")
@@ -1351,15 +1358,15 @@ elif menu == "관리자 업체관리 (메일 발송)":
                                 else:
                                     success, msg = send_email(final_target_email, mail_subject_req, mail_body_req.replace('\n', '<br>'))
                                     if success:
-                                        st.success(f"{target_comp_mail} 담당자({final_target_email})에게 메일 발송을 완료했습니다.")
+                                        st.success(f"[성공] {target_comp_mail} 담당자({final_target_email})에게 메일 발송을 완료했습니다.")
                                     else:
                                         st.error(f"[발송 실패 진단] {final_target_email} : {msg}")
                                         
                             st.markdown("---")
-                            st.markdown("#### 🏁 심사 완료 처리")
+                            st.markdown("#### [마감] 심사 완료 처리")
                             st.caption("해당 업체와 메일 송수신 및 미비 서류 보완이 완전히 끝났거나, 예외적으로 이대로 심사를 마감할 경우 아래 버튼을 누르십시오. 확정 처리된 업체는 더 이상 보완 대기 목록에 나타나지 않습니다.")
                             
-                            if st.button("✅ 이 업체의 심사 최종 확정 (보완 요청 대기 목록에서 영구 숨기기)"):
+                            if st.button("[최종 확정] 이 업체의 심사 최종 확정 (보완 요청 대기 목록에서 영구 숨기기)"):
                                 with st.spinner("최종 확정 처리 중..."):
                                     for idx, row in comp_zero_df.iterrows():
                                         uid = row['고유ID']
@@ -1367,7 +1374,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
                                         if "최종확정" not in current_score:
                                             new_score = current_score + " (최종확정)"
                                             update_google_sheet_admin_score(uid, new_score)
-                                st.success(f"{target_comp_mail} 업체의 심사가 최종 확정되어 대기 목록에서 제외되었습니다.")
+                                st.success(f"[성공] {target_comp_mail} 업체의 심사가 최종 확정되어 대기 목록에서 제외되었습니다.")
                                 st.rerun()
 
         except Exception as e:
