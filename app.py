@@ -280,7 +280,6 @@ def send_email(to_email, subject, body, attachment_file=None):
 # ==========================================
 # [3] 사이드바 메뉴 및 챗봇 고정 배치
 # ==========================================
-# 챗봇을 메뉴 상단에 고정하기 위한 컨테이너 할당
 sidebar_top = st.sidebar.container()
 
 st.sidebar.markdown("---")
@@ -291,7 +290,6 @@ menu = st.sidebar.radio("접속 화면을 선택하세요", [
     "관리자 업체관리 (메일 발송)"
 ])
 
-# 사이드바 상단 챗봇 영역 (업체 제출 화면에서만 활성화)
 if menu == "업체 서류 일괄 제출 (AI 검증)":
     with sidebar_top:
         st.markdown("### [안내] 서류 제출 가이드 챗봇")
@@ -300,13 +298,11 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
         if "messages" not in st.session_state:
             st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다. 궁금하신 내용을 질문해 주십시오."}]
         
-        # 챗봇 히스토리를 고정된 높이의 스크롤 컨테이너로 제한
         chat_container = st.container(height=350)
         with chat_container:
             for msg in st.session_state.messages:
                 st.chat_message(msg["role"]).write(msg["content"])
                 
-        # 채팅 입력 필드를 채팅창 바로 밑에 폼 형태로 고정 배치
         with st.form(key="chat_form", clear_on_submit=True):
             user_input = st.text_input("질문을 입력하세요...", label_visibility="collapsed")
             submit_btn = st.form_submit_button("전송", use_container_width=True)
@@ -898,18 +894,11 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {doc_name} 검증 완료...")
 
                     my_bar.empty()
-                    
-                    final_score = int((total_earned / total_max) * 100) if total_max > 0 else 0
-                    if final_score >= 85: grade = "승 인"
-                    elif final_score >= 70: grade = "지 도"
-                    else: grade = "등급 외"
 
                     st.markdown("---")
-                    st.markdown("### AI 심사 결과 보고")
-                    st.info(f"[{company_name}] 업체의 제출 서류에 대한 AI 심사가 완료되었습니다.\n\n"
-                            f"- 환산 총점: {final_score} 점 / 100 점 만점\n"
-                            f"- 예상 등급: {grade}\n\n"
-                            f"[안내] 본 결과는 AI 심사 결과이며, 당사 품질관리 책임자의 최종 육안 검토 후 확정됩니다.")
+                    st.markdown("### 서류 제출 완료")
+                    st.success(f"[{company_name}] 업체의 서류 제출이 성공적으로 완료되었습니다.\n\n"
+                               f"[안내] 추후 심사 결과 점수가 기준치 미달 시 필요 서류는 메일로 개별 통보하도록 하겠습니다.")
 
 # ==========================================
 # [5] 관리자 대시보드
@@ -1260,19 +1249,27 @@ elif menu == "관리자 업체관리 (메일 발송)":
                     default_emails = ", ".join(list(set(email_dict.values())))
                     target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=default_emails, height=100)
                     
-                    mail_subject_bulk = st.text_input("메일 제목:", value="[연세유업 아산공장] 2026년도 협력업체 서류 심사 제출 안내")
+                    mail_subject_bulk = st.text_input("메일 제목:", value="[중요] 2026년도 연세유업 협력업체 정기 서류 심사 제출 안내")
                     
                     default_bulk_body = """안녕하십니까,
-연세유업 식품안전팀 곽정혁입니다.
+연세유업 아산공장 품질안전부문 식품안전팀 곽정혁입니다.
 
-2026년도 협력업체 서류 심사 기간이 도래하여 안내해 드립니다.
-아래 시스템 링크에 접속하시어 기한 내에 필수 서류를 업로드해 주시기 바랍니다.
+연세유업과 협력업체에서 생산되는 모든 제품의 품질 향상을 목적으로 당사 구매업무 관리 규정에 따라 '2026년도 협력업체 정기 서류 심사'를 실시하오니 적극적인 협조 부탁드립니다.
 
+올해부터는 기존의 엑셀 파일 작성 및 이메일 회신 방식에서 벗어나, [협력업체 AI 서류 심사 포털]을 전면 도입하였습니다. 번거로운 엑셀 작성 없이 아래 시스템에 접속하여 증빙 서류만 업로드해 주시기 바랍니다.
+
+■ 서류 제출 기한: 2026년 9월 11일(금)까지 (기한 엄수)
 ■ 시스템 접속 링크: https://9yhkkjjyezju9w5bxsdhxd.streamlit.app/
 
-[안내] 시스템 내부에 '서류 제출 지침 문의 챗봇'이 마련되어 있습니다.
-서류 업로드 시 궁금한 사항이나 기준이 헷갈리실 경우, 해당 챗봇에 적극적으로 문의하시면 즉각적인 가이드를 받으실 수 있습니다.
-또한, 첨부해 드린 매뉴얼을 참고하시어 원활한 서류 접수가 진행될 수 있도록 협조 부탁드립니다.
+[필수 확인 및 제출 요령]
+1. 매뉴얼 필독: 첨부된 '연세유업 협력업체 서류 심사 매뉴얼(PDF)'을 반드시 먼저 확인해 주십시오. 
+2. 평가 기준일: 제출 서류 및 작성 내용은 최근 1년을 기준으로 연세유업에 납품하신 품목에 맞게 준비해 주시면 됩니다.
+3. 심사 제외 대상: 당사와 최근 6개월간 거래 실적이 없는 업체는 시스템에 입력하지 마시고 본 메일로 별도 연락해 주시기 바랍니다.
+4. 타부서 수신 시: 본 안내 메일을 받으신 분이 관련 담당자가 아닐 경우, 지체 없이 품질관리 부서로 전달하시어 미제출에 따른 불이익을 받지 않도록 유의해 주십시오.
+
+[시스템 이용 문의]
+시스템 내에 24시간 가이드가 가능한 '서류 제출 지침 문의 챗봇'이 마련되어 있으니 적극 활용해 주시기 바랍니다.
+기타 문의사항은 rhkrwjdgur@yonseidairy.com 으로 문의해 주시기 바랍니다.
 
 감사합니다."""
 
@@ -1345,7 +1342,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
                             elif score >= 70: grade = "지 도"
                             else: grade = "등급 외"
 
-                            st.info(f"[요약] [{target_comp_mail}] 현재 평가 요약 : 환산 총점 {score}점 (예상 등급: {grade})")
+                            st.info(f"[{target_comp_mail}] 현재 평가 요약 : 환산 총점 {score}점 (예상 등급: {grade})")
                             
                             comp_zero_df = zero_score_df_all[zero_score_df_all['업체명'] == target_comp_mail]
                             target_email_default = email_dict.get(target_comp_mail, "")
