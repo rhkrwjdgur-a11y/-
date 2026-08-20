@@ -280,6 +280,10 @@ def send_email(to_email, subject, body, attachment_file=None):
 # ==========================================
 # [3] 사이드바 메뉴 및 챗봇 고정 배치
 # ==========================================
+# 챗봇을 메뉴 상단에 고정하기 위한 컨테이너 할당
+sidebar_top = st.sidebar.container()
+
+st.sidebar.markdown("---")
 st.sidebar.title("시스템 메뉴")
 menu = st.sidebar.radio("접속 화면을 선택하세요", [
     "업체 서류 일괄 제출 (AI 검증)", 
@@ -287,63 +291,69 @@ menu = st.sidebar.radio("접속 화면을 선택하세요", [
     "관리자 업체관리 (메일 발송)"
 ])
 
-# 사이드바 하단 챗봇 영역 (업체 제출 화면에서만 활성화)
+# 사이드바 상단 챗봇 영역 (업체 제출 화면에서만 활성화)
 if menu == "업체 서류 일괄 제출 (AI 검증)":
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### [안내] 서류 제출 가이드 챗봇")
-    st.sidebar.info("서류 제출이 헷갈리시나요?\n담당자 문의 전, 챗봇에게 즉시 물어보십시오.")
-    
-    if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다. 궁금하신 내용을 질문해 주십시오."}]
-    
-    chat_container = st.sidebar.container(height=450)
-    with chat_container:
-        for msg in st.session_state.messages:
-            st.chat_message(msg["role"]).write(msg["content"])
-            
-    if prompt := st.sidebar.chat_input("질문을 입력하세요..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with chat_container:
-            st.chat_message("user").write(prompt)
+    with sidebar_top:
+        st.markdown("### [안내] 서류 제출 가이드 챗봇")
+        st.info("서류 제출이 헷갈리시나요?\n담당자 문의 전, 챗봇에게 즉시 물어보십시오.")
         
-        try:
-            client = get_gemini_client()
+        if "messages" not in st.session_state:
+            st.session_state.messages = [{"role": "assistant", "content": "연세유업 서류심사 제출 가이드라인에 기반하여 팩트로 답변해 드립니다. 궁금하신 내용을 질문해 주십시오."}]
+        
+        # 챗봇 히스토리를 고정된 높이의 스크롤 컨테이너로 제한
+        chat_container = st.container(height=350)
+        with chat_container:
+            for msg in st.session_state.messages:
+                st.chat_message(msg["role"]).write(msg["content"])
+                
+        # 채팅 입력 필드를 채팅창 바로 밑에 폼 형태로 고정 배치
+        with st.form(key="chat_form", clear_on_submit=True):
+            user_input = st.text_input("질문을 입력하세요...", label_visibility="collapsed")
+            submit_btn = st.form_submit_button("전송", use_container_width=True)
+            
+        if submit_btn and user_input:
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            
+            try:
+                client = get_gemini_client()
 
-            sys_ctx = """
-            당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
-            당신의 임무는 협력업체 담당자의 질문에 직접, 구체적이고, 팩트 기반으로 답변하는 것입니다. 
-            절대 "담당자에게 이메일로 문의하라"고 회피하지 말고, 아래의 시스템 규정을 바탕으로 직접 안내하십시오.
+                sys_ctx = """
+                당신은 연세유업 아산공장의 협력업체 서류심사 헬프데스크 AI 직원입니다.
+                당신의 임무는 협력업체 담당자의 질문에 직접, 구체적이고, 팩트 기반으로 답변하는 것입니다. 
+                절대 "담당자에게 이메일로 문의하라"고 회피하지 말고, 아래의 시스템 규정을 바탕으로 직접 안내하십시오.
 
-            [시스템 제출 규정 및 가이드라인]
-            1. 거래 형태별 작성 대상:
-               - 원재료(제조) / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 전체 작성 대상이며, [검사내용시트] 작성 대상입니다(성적서 수치 대조).
-               - 부자재(제조) / 세제류 외(제조): [개별시트] 불필요 항목이 자동 제외된 폼만 작성하며, [검사내용시트] 작성은 규정에 따라 면제됩니다.
-               - 수입판매: [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다(COA 통관 기준).
-               - 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다.
-            2. 증빙 자료 업로드 원칙:
-               - 항목별로 1개 이상의 필수 파일을 업로드해야 합니다. 다중 파일 업로드가 가능합니다.
-               - '1개만 있어도 만점'이라고 명시된 항목은 여러 서류 중 하나만 제출해도 인정됩니다.
-               - 해당사항이 없는 경우 '해당사항 없음(N/A)'을 체크하고 반드시 타당한 사유를 텍스트로 입력해야 합니다. 사유가 부실하면 관리자 검토 시 반려 처리됩니다.
-            3. 검사내용 시트 작성법:
-               - 업로드할 '자가/공인 검사 성적서' 또는 '수입 COA' 원본을 보고, 주요 검사항목, 법적/통관 기준, 실제 검사 결과값을 표에 직접 입력해야 합니다.
-               - 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
-            4. 시스템 이용 순서:
-               - [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후, 맨 아래 '모든 시트 작성 완료 및 최종 일괄 제출' 버튼을 클릭해야 완료됩니다.
+                [시스템 제출 규정 및 가이드라인]
+                1. 거래 형태별 작성 대상:
+                   - 원재료(제조) / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 전체 작성 대상이며, [검사내용시트] 작성 대상입니다(성적서 수치 대조).
+                   - 부자재(제조) / 세제류 외(제조): [개별시트] 불필요 항목이 자동 제외된 폼만 작성하며, [검사내용시트] 작성은 규정에 따라 면제됩니다.
+                   - 수입판매: [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다(COA 통관 기준).
+                   - 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다.
+                2. 증빙 자료 업로드 원칙:
+                   - 항목별로 1개 이상의 필수 파일을 업로드해야 합니다. 다중 파일 업로드가 가능합니다.
+                   - '1개만 있어도 만점'이라고 명시된 항목은 여러 서류 중 하나만 제출해도 인정됩니다.
+                   - 해당사항이 없는 경우 '해당사항 없음(N/A)'을 체크하고 반드시 타당한 사유를 텍스트로 입력해야 합니다. 사유가 부실하면 관리자 검토 시 반려 처리됩니다.
+                3. 검사내용 시트 작성법:
+                   - 업로드할 '자가/공인 검사 성적서' 또는 '수입 COA' 원본을 보고, 주요 검사항목, 법적/통관 기준, 실제 검사 결과값을 표에 직접 입력해야 합니다.
+                   - 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
+                4. 시스템 이용 순서:
+                   - [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후, 맨 아래 '모든 시트 작성 완료 및 최종 일괄 제출' 버튼을 클릭해야 완료됩니다.
 
-            [기본 연락처 및 문의 안내 지침]
-            - 담당자: 식품안전팀 곽정혁
-            - 이메일: rhkrwjdgur@yonseidairy.com
-            - 전화번호 안내는 절대 하지 마십시오. 시스템 오류 등 AI가 도저히 해결할 수 없는 중대한 문제에 한해서만 이메일 문의를 안내하십시오.
-            """
+                [기본 연락처 및 문의 안내 지침]
+                - 담당자: 식품안전팀 곽정혁
+                - 이메일: rhkrwjdgur@yonseidairy.com
+                - 전화번호 안내는 절대 하지 마십시오. 시스템 오류 등 AI가 도저히 해결할 수 없는 중대한 문제에 한해서만 이메일 문의를 안내하십시오.
+                - [중요 필수 지시사항]: 질문에 대한 안내를 완료한 후, 모든 답변의 가장 마지막 줄에 반드시 다음 안내 문구를 정확하게 추가하십시오:
+                "챗봇으로도 원하시는 답변을 못 받으신 경우 rhkrwjdgur@yonseidairy.com 으로 연락주세요."
+                """
 
-            resp = client.models.generate_content(
-                model=GEMINI_MODEL_CHAT,
-                contents=sys_ctx + "\n질문: " + prompt,
-            )
-            st.session_state.messages.append({"role": "assistant", "content": resp.text})
-            st.rerun()
-        except Exception as e:
-            st.sidebar.error(f"[오류] 챗봇 응답 실패: {e}")
+                resp = client.models.generate_content(
+                    model=GEMINI_MODEL_CHAT,
+                    contents=sys_ctx + "\n질문: " + user_input,
+                )
+                st.session_state.messages.append({"role": "assistant", "content": resp.text})
+                st.rerun()
+            except Exception as e:
+                st.error(f"[오류] 챗봇 응답 실패: {e}")
 
 # ==========================================
 # [4] 업체 서류 일괄 제출 화면
@@ -1335,7 +1345,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
                             elif score >= 70: grade = "지 도"
                             else: grade = "등급 외"
 
-                            st.info(f"📊 **[{target_comp_mail}] 현재 평가 요약** : 환산 총점 **{score}점** (예상 등급: **{grade}**)")
+                            st.info(f"[요약] [{target_comp_mail}] 현재 평가 요약 : 환산 총점 {score}점 (예상 등급: {grade})")
                             
                             comp_zero_df = zero_score_df_all[zero_score_df_all['업체명'] == target_comp_mail]
                             target_email_default = email_dict.get(target_comp_mail, "")
