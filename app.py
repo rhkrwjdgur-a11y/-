@@ -685,12 +685,12 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 dist_coa_files = st.file_uploader("위 표와 대조할 수입 COA 성적서 원본 업로드 (다중 파일 가능)", key="ddf_file", accept_multiple_files=True, disabled=dist_coa_na)
 
     # ==========================================
-    # 최종 통합 제출 버튼 (2단계 검증 로직 추가)
+    # 최종 통합 제출 버튼 (2단계 검증 로직 + 실시간 저장 및 오류 방지)
     # ==========================================
     st.markdown("<br><hr>", unsafe_allow_html=True)
     st.markdown("### 작성 완료 후 일괄 검증 제출")
     
-    st.error("[절대 주의] 제출 버튼을 누른 후 서류 전송 및 AI 판독에 시간이 소요되니 완료 화면이 뜰 때까지 절대 브라우저를 닫거나 새로고침하지 마십시오.")
+    st.error("[절대 주의] 제출 버튼을 누른 후 서류 전송 및 AI 판독에 수 분이 소요될 수 있습니다. [제출 완료] 메시지가 화면에 나타날 때까지 절대 창을 닫거나 새로고침하지 마십시오.")
 
     if "force_submit_warned" not in st.session_state:
         st.session_state.force_submit_warned = False
@@ -728,138 +728,141 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 elif not dist_coa_na and not dist_coa_files:
                     missing_alerts.append("[수입] COA 성적서 (증빙 서류 미제출)")
 
-            # 2단계: 누락 판별 및 강제 제출 분기
+            # 2단계: 누락 판별 및 강제 제출 분기 (명확한 UI)
             if missing_alerts and not st.session_state.force_submit_warned:
-                st.error("[누락 알림] 다음 항목이 제출되지 않았습니다:\n- " + "\n- ".join(missing_alerts))
-                st.warning("[안내] 누락이 확인되나 서류가 없어서 등록을 안하신거면 버튼을 한번더 눌러주세요. (해당 항목은 미제출 감점 처리 후 제출됩니다.)")
+                st.error("[제출 보류] 필수 서류가 누락되었습니다.\n\n- " + "\n- ".join(missing_alerts))
+                st.warning("[안내] 서류가 존재하지 않아 제출할 수 없는 경우, 부적합(감점) 처리됨을 인지하셨다면 [최종 일괄 제출] 버튼을 한 번 더 눌러주십시오. 강제로 제출이 진행됩니다.")
                 st.session_state.force_submit_warned = True
             else:
                 st.session_state.force_submit_warned = False
                 
-                cert_summary_list = []
-                for idx, row in cert_df.iterrows():
-                    if pd.notna(row['법적필수(O,X)']) or pd.notna(row['인증대상']) or pd.notna(row['최초인증일']):
-                        cert_summary_list.append(f"[{row['인증명']}] 필수:{row['법적필수(O,X)']}, 대상:{row['인증대상']}, 인증일:{row['최초인증일']}, 비고:{row['비고']}")
-                cert_str = "\n".join(cert_summary_list) if cert_summary_list else "입력된 인증 내역 없음"
+                try:
+                    cert_summary_list = []
+                    for idx, row in cert_df.iterrows():
+                        if pd.notna(row['법적필수(O,X)']) or pd.notna(row['인증대상']) or pd.notna(row['최초인증일']):
+                            cert_summary_list.append(f"[{row['인증명']}] 필수:{row['법적필수(O,X)']}, 대상:{row['인증대상']}, 인증일:{row['최초인증일']}, 비고:{row['비고']}")
+                    cert_str = "\n".join(cert_summary_list) if cert_summary_list else "입력된 인증 내역 없음"
 
-                changes_summary = []
-                if v_item: changes_summary.append(f"거래품목 변동: {v_item_detail}")
-                if v_type: changes_summary.append(f"유형 변동: {v_type_detail}")
-                if v_insp: changes_summary.append(f"검사항목 변동: {v_insp_detail}")
-                changes_str = " / ".join(changes_summary) if changes_summary else "해당사항 없음"
+                    changes_summary = []
+                    if v_item: changes_summary.append(f"거래품목 변동: {v_item_detail}")
+                    if v_type: changes_summary.append(f"유형 변동: {v_type_detail}")
+                    if v_insp: changes_summary.append(f"검사항목 변동: {v_insp_detail}")
+                    changes_str = " / ".join(changes_summary) if changes_summary else "해당사항 없음"
 
-                tasks = []
-                instant_logs = []
+                    tasks = []
+                    instant_logs = []
 
-                def apply_submission(doc_name, data):
-                    max_score = DOC_MAX_SCORES.get(doc_name, 0)
-                    fail_score = int(max_score * 0.6) if max_score > 0 else 0
-                    
-                    if data["is_na"]:
-                        if not data["na_reason"]:
+                    def apply_submission(doc_name, data):
+                        max_score = DOC_MAX_SCORES.get(doc_name, 0)
+                        fail_score = int(max_score * 0.6) if max_score > 0 else 0
+                        
+                        if data["is_na"]:
+                            if not data["na_reason"]:
+                                instant_logs.append({
+                                    "doc_name": doc_name, "criteria": data["criteria"],
+                                    "judgment": f"{fail_score}점 (사유누락)", "reason": "해당사항 없음(N/A) 체크 후 사유 미입력으로 부적합 처리됨",
+                                    "admin_score": f"{fail_score}점 (사유누락)", "file_links": "첨부파일 없음", "max_score": max_score
+                                })
+                            else:
+                                instant_logs.append({
+                                    "doc_name": doc_name, "criteria": data["criteria"],
+                                    "judgment": f"{max_score}점 (적합/NA예외)", "reason": f"해당사항 없음: {data['na_reason']}",
+                                    "admin_score": f"{max_score}점 (적합/NA예외)", "file_links": "첨부파일 없음", "max_score": max_score
+                                })
+                        elif not data["files"]:
                             instant_logs.append({
                                 "doc_name": doc_name, "criteria": data["criteria"],
-                                "judgment": f"{fail_score}점 (사유누락)", "reason": "해당사항 없음(N/A) 체크 후 사유 미입력으로 부적합 처리됨",
-                                "admin_score": f"{fail_score}점 (사유누락)", "file_links": "첨부파일 없음", "max_score": max_score
+                                "judgment": f"{fail_score}점 (부적합/미첨부)", "reason": "증빙자료 미첨부로 인한 부적합 처리",
+                                "admin_score": f"{fail_score}점 (부적합/미첨부)", "file_links": "첨부파일 없음", "max_score": max_score
                             })
                         else:
-                            instant_logs.append({
-                                "doc_name": doc_name, "criteria": data["criteria"],
-                                "judgment": f"{max_score}점 (적합/NA예외)", "reason": f"해당사항 없음: {data['na_reason']}",
-                                "admin_score": f"{max_score}점 (적합/NA예외)", "file_links": "첨부파일 없음", "max_score": max_score
-                            })
-                    elif not data["files"]:
-                        instant_logs.append({
-                            "doc_name": doc_name, "criteria": data["criteria"],
-                            "judgment": f"{fail_score}점 (부적합/미첨부)", "reason": "증빙자료 미첨부로 인한 부적합 처리",
-                            "admin_score": f"{fail_score}점 (부적합/미첨부)", "file_links": "첨부파일 없음", "max_score": max_score
-                        })
-                    else:
-                        tasks.append({"doc_name": doc_name, "criteria": data["criteria"], "files": data["files"], "max_score": max_score})
+                            tasks.append({"doc_name": doc_name, "criteria": data["criteria"], "files": data["files"], "max_score": max_score})
 
-                if is_mfg:
-                    for doc_key, data in mfg_data.items():
-                        apply_submission(doc_key, data)
+                    if is_mfg:
+                        for doc_key, data in mfg_data.items():
+                            apply_submission(doc_key, data)
 
-                if requires_inspection_sheet:
-                    if t1 or t3 or t6:
-                        if mfg_coa_na:
-                            if not mfg_coa_na_reason:
+                    if requires_inspection_sheet:
+                        if t1 or t3 or t6:
+                            if mfg_coa_na:
+                                if not mfg_coa_na_reason:
+                                    instant_logs.append({
+                                        "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
+                                        "judgment": "부적합 (사유누락)", "reason": "해당사항 없음(N/A) 사유 미입력으로 부적합 처리됨",
+                                        "admin_score": "부적합 (사유누락)", "file_links": "첨부파일 없음", "max_score": 0
+                                    })
+                                else:
+                                    instant_logs.append({
+                                        "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
+                                        "judgment": "적합 (NA예외)", "reason": f"해당사항 없음: {mfg_coa_na_reason}",
+                                        "admin_score": "적합 (NA예외)", "file_links": "첨부파일 없음", "max_score": 0
+                                    })
+                            elif not mfg_coa_files:
                                 instant_logs.append({
                                     "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
+                                    "judgment": "부적합 (미첨부)", "reason": "자가검사성적서가 업로드되지 않아 부적합 처리됨",
+                                    "admin_score": "부적합 (미첨부)", "file_links": "첨부파일 없음", "max_score": 0
+                                })
+                            else:
+                                grid_data = mfg_df.to_dict('records')
+                                tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "files": mfg_coa_files, "max_score": 0})
+
+                    if is_dist:
+                        for doc_key, data in dist_data.items():
+                            apply_submission(doc_key, data)
+                            
+                        if dist_coa_na:
+                            if not dist_coa_na_reason:
+                                instant_logs.append({
+                                    "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
                                     "judgment": "부적합 (사유누락)", "reason": "해당사항 없음(N/A) 사유 미입력으로 부적합 처리됨",
                                     "admin_score": "부적합 (사유누락)", "file_links": "첨부파일 없음", "max_score": 0
                                 })
                             else:
                                 instant_logs.append({
-                                    "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
-                                    "judgment": "적합 (NA예외)", "reason": f"해당사항 없음: {mfg_coa_na_reason}",
+                                    "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
+                                    "judgment": "적합 (NA예외)", "reason": f"해당사항 없음: {dist_coa_na_reason}",
                                     "admin_score": "적합 (NA예외)", "file_links": "첨부파일 없음", "max_score": 0
                                 })
-                        elif not mfg_coa_files:
+                        elif not dist_coa_files:
                             instant_logs.append({
-                                "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
-                                "judgment": "부적합 (미첨부)", "reason": "자가검사성적서가 업로드되지 않아 부적합 처리됨",
+                                "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
+                                "judgment": "부적합 (미첨부)", "reason": "수입 COA 성적서가 업로드되지 않아 부적합 처리됨",
                                 "admin_score": "부적합 (미첨부)", "file_links": "첨부파일 없음", "max_score": 0
                             })
                         else:
-                            grid_data = mfg_df.to_dict('records')
-                            tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "files": mfg_coa_files, "max_score": 0})
+                            grid_data = dist_df.to_dict('records')
+                            tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "files": dist_coa_files, "max_score": 0})
 
-                if is_dist:
-                    for doc_key, data in dist_data.items():
-                        apply_submission(doc_key, data)
-                        
-                    if dist_coa_na:
-                        if not dist_coa_na_reason:
-                            instant_logs.append({
-                                "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
-                                "judgment": "부적합 (사유누락)", "reason": "해당사항 없음(N/A) 사유 미입력으로 부적합 처리됨",
-                                "admin_score": "부적합 (사유누락)", "file_links": "첨부파일 없음", "max_score": 0
-                            })
-                        else:
-                            instant_logs.append({
-                                "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
-                                "judgment": "적합 (NA예외)", "reason": f"해당사항 없음: {dist_coa_na_reason}",
-                                "admin_score": "적합 (NA예외)", "file_links": "첨부파일 없음", "max_score": 0
-                            })
-                    elif not dist_coa_files:
-                        instant_logs.append({
-                            "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
-                            "judgment": "부적합 (미첨부)", "reason": "수입 COA 성적서가 업로드되지 않아 부적합 처리됨",
-                            "admin_score": "부적합 (미첨부)", "file_links": "첨부파일 없음", "max_score": 0
-                        })
+                    if not tasks and not instant_logs:
+                        st.warning("[주의] 제출할 항목이 구성되지 않았습니다. 거래 형태를 다시 확인해 주십시오.")
                     else:
-                        grid_data = dist_df.to_dict('records')
-                        tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "files": dist_coa_files, "max_score": 0})
+                        progress_text = "서류 전송 및 판독이 진행 중입니다. [제출 완료] 알림이 뜰 때까지 절대 창을 닫지 마십시오..."
+                        my_bar = st.progress(0, text=progress_text)
 
-                if not tasks and not instant_logs:
-                    st.warning("[주의] 제출할 항목이 구성되지 않았습니다. 거래 형태를 다시 확인해 주십시오.")
-                else:
-                    progress_text = "서류 제출 및 검증이 진행 중입니다. 완료 시까지 창을 닫지 마십시오..."
-                    my_bar = st.progress(0, text=progress_text)
+                        total_expected = len(tasks) + len(instant_logs)
+                        current_idx = 0
 
-                    total_expected = len(tasks) + len(instant_logs)
-                    current_idx = 0
+                        current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                        formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                    current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                    formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        # 실시간 순차 저장 (에러 시 보존을 위해)
+                        for log in instant_logs:
+                            current_idx += 1
+                            unique_id = f"{company_name}_{log['doc_name']}_{current_time_str}"
+                            ms = log["max_score"]
+                            
+                            row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], log["file_links"], manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
+                            append_to_google_sheet(row_data)
+                            my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 데이터 기록 중...")
 
-                    for log in instant_logs:
-                        current_idx += 1
-                        unique_id = f"{company_name}_{log['doc_name']}_{current_time_str}"
-                        row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], log["file_links"], manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
-                        append_to_google_sheet(row_data)
-                        my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 처리 중...")
+                        for task in tasks:
+                            current_idx += 1
+                            doc_name = task["doc_name"]
+                            files_list = task["files"]
+                            criteria = task["criteria"]
+                            ms = task["max_score"]
 
-                    for task in tasks:
-                        current_idx += 1
-                        doc_name = task["doc_name"]
-                        files_list = task["files"]
-                        criteria = task["criteria"]
-                        ms = task["max_score"]
-
-                        try:
                             drive_links = []
                             for f_idx, file_obj in enumerate(files_list):
                                 unique_id = f"{company_name}_{doc_name}_{current_time_str}_{f_idx}"
@@ -913,17 +916,16 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                             row_data = [f"{company_name}_{doc_name}_{current_time_str}", formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link_str, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
                             append_to_google_sheet(row_data)
 
-                        except Exception as e:
-                            st.error(f"[오류] {doc_name} 검증 중 오류 발생: {e}")
+                            my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {doc_name} 검증 및 저장 완료...")
 
-                        my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {doc_name} 검증 완료...")
-
-                    my_bar.empty()
-
-                    st.markdown("---")
-                    st.markdown("### 서류 제출 완료")
-                    st.success(f"[{company_name}] 업체의 서류 제출이 성공적으로 완료되었습니다.\n\n"
-                               f"[안내] 추후 심사 결과 점수가 기준치 미달 시 필요 서류는 메일로 개별 통보하도록 하겠습니다.")
+                        my_bar.empty()
+                        st.markdown("---")
+                        st.success(f"[제출 완료] [{company_name}] 귀사의 서류가 성공적으로 접수 및 저장되었습니다.\n\n"
+                                   f"[안내] 추후 품질관리 부서의 최종 확인을 거치게 되며, 심사 결과 점수가 기준치 미달 시 필요 보완 서류는 기재해주신 이메일로 개별 통보하도록 하겠습니다.")
+                        
+                except Exception as e:
+                    st.error(f"[제출 실패] 통신 오류 또는 일시적인 네트워크 문제로 서류 제출이 중단되었습니다.\n"
+                             f"누락된 서류가 없는지 확인 후, 다시 화면 하단의 [최종 일괄 제출] 버튼을 눌러주십시오. (시스템 내부 중복 방지 로직에 의해 재제출 시 기존 중단된 데이터는 자동으로 덮어씌워지므로 안심하셔도 됩니다.)")
 
 # ==========================================
 # [5] 관리자 대시보드
@@ -964,6 +966,10 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     filtered_df = log_df.loc[mask]
                 else:
                     filtered_df = log_df
+
+                # 최신 제출 데이터만 남기고 중복 제거 (업체명, 심사항목 기준)
+                if not filtered_df.empty:
+                    filtered_df = filtered_df.sort_values(time_col, ascending=False).drop_duplicates(subset=['업체명', '심사항목'], keep='first')
 
                 st.markdown("### 1. 심사 서류 제출 현황 파악")
                 all_targets = [c for c in TARGET_COMPANIES if c != "선택하세요"]
@@ -1323,7 +1329,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
                 with tab_mail2:
                     st.markdown("### 미비 서류 보완 요청 메일 발송")
-                    st.caption("[안내] 심사 결과 '미비(0점)' 처리된 항목이 있는 업체를 선택하여 보완 요청 메일을 발송합니다.")
+                    st.caption("[안내] 심사 결과 '미비' 처리된 항목이 있는 업체를 선택하여 보완 요청 메일을 발송합니다.")
                     
                     def is_deducted_mail(row):
                         score_str = str(row.get('관리자최종점수', '0점'))
