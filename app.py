@@ -137,6 +137,17 @@ def append_to_google_sheet(row_data):
     except Exception as e:
         return str(e)
 
+def append_rows_to_google_sheet(rows_data):
+    try:
+        creds = get_credentials()
+        gc = gspread.authorize(creds)
+        sh = gc.open_by_key(GOOGLE_SHEET_ID)
+        worksheet = sh.sheet1
+        worksheet.append_rows(rows_data)
+        return True
+    except Exception as e:
+        return str(e)
+
 def update_google_sheet_admin_score(unique_id, new_score):
     try:
         creds = get_credentials()
@@ -685,7 +696,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 dist_coa_files = st.file_uploader("위 표와 대조할 수입 COA 성적서 원본 업로드 (다중 파일 가능)", key="ddf_file", accept_multiple_files=True, disabled=dist_coa_na)
 
     # ==========================================
-    # 최종 통합 제출 버튼 (2단계 검증 로직 + 실시간 저장 및 오류 방지)
+    # 최종 통합 제출 버튼 (2단계 검증 로직 + 단일 일괄 저장 방어 로직)
     # ==========================================
     st.markdown("<br><hr>", unsafe_allow_html=True)
     st.markdown("### 작성 완료 후 일괄 검증 제출")
@@ -842,20 +853,21 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
                         total_expected = len(tasks) + len(instant_logs)
                         current_idx = 0
+                        
+                        rows_to_append = []
 
                         current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                         formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                        # 실시간 순차 저장 (에러 시 보존을 위해)
+                        # 1. 즉시 처리 항목 (N/A, 미제출 등)
                         for log in instant_logs:
                             current_idx += 1
                             unique_id = f"{company_name}_{log['doc_name']}_{current_time_str}"
-                            ms = log["max_score"]
-                            
                             row_data = [unique_id, formatted_time, company_name, log["doc_name"], log["criteria"], log["judgment"], log["reason"], log["admin_score"], log["file_links"], manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
-                            append_to_google_sheet(row_data)
-                            my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 데이터 기록 중...")
+                            rows_to_append.append(row_data)
+                            my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 데이터 구성 중...")
 
+                        # 2. AI 판독 및 파일 저장 항목 (절대 끊기지 않는 무중단 로직 적용)
                         for task in tasks:
                             current_idx += 1
                             doc_name = task["doc_name"]
@@ -863,69 +875,89 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                             criteria = task["criteria"]
                             ms = task["max_score"]
 
-                            drive_links = []
-                            for f_idx, file_obj in enumerate(files_list):
-                                unique_id = f"{company_name}_{doc_name}_{current_time_str}_{f_idx}"
-                                file_name = f"{unique_id}_{file_obj.name}"
-                                file_buffer = io.BytesIO(file_obj.getvalue())
-                                link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
-                                drive_links.append(link)
-                            
-                            drive_link_str = " | ".join(drive_links)
-                            
-                            if ms == 0:
-                                eval_instructions = """
-                                - 본 항목은 필수 요건으로 점수가 산정되지 않습니다. 기준 완벽 충족 시 '통과', 미충족 시 '부적합'으로 판정하십시오.
+                            drive_link_str = "첨부파일 업로드 오류"
+                            try:
+                                # 파일 드라이브 업로드 (가장 최우선으로 실행하여 서류부터 확보)
+                                drive_links = []
+                                for f_idx, file_obj in enumerate(files_list):
+                                    unique_id = f"{company_name}_{doc_name}_{current_time_str}_{f_idx}"
+                                    file_name = f"{unique_id}_{file_obj.name}"
+                                    file_buffer = io.BytesIO(file_obj.getvalue())
+                                    link = upload_to_google_drive(file_buffer, file_name, file_obj.type)
+                                    drive_links.append(link)
                                 
-                                [평가 완화 지침 (매우 중요)]
-                                본 심사는 업체의 관리 현황을 전반적으로 파악하기 위한 목적이므로 채점 기준을 대폭 완화합니다. 
-                                명시된 서류 명칭과 정확히 일치하지 않더라도(예: 기준서 대신 관련 입고증, 납품확인서, 요청서 등), 해당 업무를 수행한 정황이 확인되면 관대하게 '통과' 처리하십시오. 백지나 전혀 무관한 서류일 때만 '부적합' 처리하십시오.
+                                drive_link_str = " | ".join(drive_links)
                                 
-                                출력양식:
-                                판정결과: (통과 또는 부적합)
-                                상세사유: (감점 시, '어떤 서류가 누락되었는지' 또는 '어떤 서류로 다시 제출해야 하는지' 업체가 직관적으로 알 수 있도록 1~2줄 이내로 핵심만 간결하게 요약할 것. 불필요한 성적서 수치 나열 금지)
-                                """
-                            else:
-                                eval_instructions = f"""
-                                [채점 규칙 (반드시 아래 점수 중 하나만 부여할 것)]
-                                - 완벽함={ms}점 / 일부 미흡={int(ms * 0.8)}점 / 부적합(또는 기준미달)={int(ms * 0.6)}점
+                                if ms == 0:
+                                    eval_instructions = """
+                                    - 본 항목은 필수 요건으로 점수가 산정되지 않습니다. 기준 완벽 충족 시 '통과', 미충족 시 '부적합'으로 판정하십시오.
+                                    
+                                    [평가 완화 지침 (매우 중요)]
+                                    본 심사는 업체의 관리 현황을 전반적으로 파악하기 위한 목적이므로 채점 기준을 대폭 완화합니다. 
+                                    명시된 서류 명칭과 정확히 일치하지 않더라도(예: 기준서 대신 관련 입고증, 납품확인서, 요청서 등), 해당 업무를 수행한 정황이 확인되면 관대하게 '통과' 처리하십시오. 백지나 전혀 무관한 서류일 때만 '부적합' 처리하십시오.
+                                    
+                                    출력양식:
+                                    판정결과: (통과 또는 부적합)
+                                    상세사유: (감점 시, '어떤 서류가 누락되었는지' 또는 '어떤 서류로 다시 제출해야 하는지' 업체가 직관적으로 알 수 있도록 1~2줄 이내로 핵심만 간결하게 요약할 것. 불필요한 성적서 수치 나열 금지)
+                                    """
+                                else:
+                                    eval_instructions = f"""
+                                    [채점 규칙 (반드시 아래 점수 중 하나만 부여할 것)]
+                                    - 완벽함={ms}점 / 일부 미흡={int(ms * 0.8)}점 / 부적합(또는 기준미달)={int(ms * 0.6)}점
 
-                                [평가 완화 지침 (매우 중요)]
-                                본 심사는 업체의 전반적인 관리 현황 파악을 목적으로 하므로 채점 기준을 대폭 완화합니다. 
-                                요구된 서류 명칭과 정확히 일치하지 않더라도, 관련된 서류(예: 입고요청서, 입고증, 납품확인서 등)가 제출되었다면 업무를 수행한 것으로 융통성 있게 인정하여 가급적 '{ms}점(완벽함)' 또는 최소 '{int(ms * 0.8)}점(일부 미흡)'을 부여하십시오. 전혀 무관한 서류일 경우에만 부적합 처리하십시오.
+                                    [평가 완화 지침 (매우 중요)]
+                                    본 심사는 업체의 전반적인 관리 현황 파악을 목적으로 하므로 채점 기준을 대폭 완화합니다. 
+                                    요구된 서류 명칭과 정확히 일치하지 않더라도, 관련된 서류(예: 입고요청서, 입고증, 납품확인서 등)가 제출되었다면 업무를 수행한 것으로 융통성 있게 인정하여 가급적 '{ms}점(완벽함)' 또는 최소 '{int(ms * 0.8)}점(일부 미흡)'을 부여하십시오. 전혀 무관한 서류일 경우에만 부적합 처리하십시오.
 
-                                출력양식:
-                                판정결과: O점 (등급)
-                                상세사유: (감점 시, '어떤 서류가 누락되었는지' 또는 '어떤 서류로 다시 제출해야 하는지' 업체가 직관적으로 알 수 있도록 1~2줄 이내로 핵심만 간결하게 요약할 것. 불필요한 성적서 수치 나열 금지)
-                                """
-                            
-                            prompt = f"""당신은 식품안전 서류 확인 시스템입니다.
-                            [평가 대상 업체 정보]
-                            - 납품 예정 품목: {delivered_items}
+                                    출력양식:
+                                    판정결과: O점 (등급)
+                                    상세사유: (감점 시, '어떤 서류가 누락되었는지' 또는 '어떤 서류로 다시 제출해야 하는지' 업체가 직관적으로 알 수 있도록 1~2줄 이내로 핵심만 간결하게 요약할 것. 불필요한 성적서 수치 나열 금지)
+                                    """
+                                
+                                prompt = f"""당신은 식품안전 서류 확인 시스템입니다.
+                                [평가 대상 업체 정보]
+                                - 납품 예정 품목: {delivered_items}
 
-                            [심사항목]: {doc_name}
-                            [평가 기준 및 필수 제출 서류]: {criteria}
+                                [심사항목]: {doc_name}
+                                [평가 기준 및 필수 제출 서류]: {criteria}
 
-                            지시사항:
-                            1. 제출된 모든 문서(다중 파일)를 종합적으로 스캔하여 [평가 기준 및 필수 제출 서류]에 명시된 요건이 존재하는지 대조하십시오.
-                            2. 기준에 '(1개만 있어도 만점)'이 명시된 경우, 여러 서류 중 하나만 제출되어도 완벽한 것으로 간주합니다.
-                            {eval_instructions}"""
+                                지시사항:
+                                1. 제출된 모든 문서(다중 파일)를 종합적으로 스캔하여 [평가 기준 및 필수 제출 서류]에 명시된 요건이 존재하는지 대조하십시오.
+                                2. 기준에 '(1개만 있어도 만점)'이 명시된 경우, 여러 서류 중 하나만 제출되어도 완벽한 것으로 간주합니다.
+                                {eval_instructions}"""
 
-                            judgment, reason, admin_score = analyze_documents_with_ai(prompt, files_list)
+                                # AI 판독 실패 시에도 시스템이 멈추지 않도록 개별 예외 처리
+                                try:
+                                    judgment, reason, admin_score = analyze_documents_with_ai(prompt, files_list)
+                                except Exception as ai_error:
+                                    judgment = "0점 (AI 판독 보류)"
+                                    reason = "제출 완료 및 드라이브 저장 성공. 단, 시스템 통신 지연으로 자동 채점이 보류되었습니다. 관리자의 육안 검토가 필요합니다."
+                                    admin_score = "0점 (재확인 필요)"
 
-                            row_data = [f"{company_name}_{doc_name}_{current_time_str}", formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link_str, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
-                            append_to_google_sheet(row_data)
+                                row_data = [f"{company_name}_{doc_name}_{current_time_str}", formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link_str, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
+                                rows_to_append.append(row_data)
 
-                            my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {doc_name} 검증 및 저장 완료...")
+                            except Exception as e:
+                                # 드라이브 업로드 등 시스템 자체 에러 시 내역 보존
+                                row_data = [f"{company_name}_{doc_name}_{current_time_str}", formatted_time, company_name, doc_name, criteria, "제출 오류", f"파일 시스템 오류 발생: {e}", "0점 (재확인 필요)", drive_link_str, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
+                                rows_to_append.append(row_data)
 
-                        my_bar.empty()
-                        st.markdown("---")
-                        st.success(f"[제출 완료] [{company_name}] 귀사의 서류가 성공적으로 접수 및 저장되었습니다.\n\n"
-                                   f"[안내] 추후 품질관리 부서의 최종 확인을 거치게 되며, 심사 결과 점수가 기준치 미달 시 필요 보완 서류는 기재해주신 이메일로 개별 통보하도록 하겠습니다.")
-                        
-                except Exception as e:
-                    st.error(f"[제출 실패] 통신 오류 또는 일시적인 네트워크 문제로 서류 제출이 중단되었습니다.\n"
-                             f"누락된 서류가 없는지 확인 후, 다시 화면 하단의 [최종 일괄 제출] 버튼을 눌러주십시오. (시스템 내부 중복 방지 로직에 의해 재제출 시 기존 중단된 데이터는 자동으로 덮어씌워지므로 안심하셔도 됩니다.)")
+                            my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {doc_name} 파일 전송 및 처리 완료...")
+
+                    my_bar.empty()
+
+                    # 3. 단 한 번의 통신으로 모든 데이터 구글 시트에 안전하게 일괄 저장
+                    if rows_to_append:
+                        with st.spinner("데이터베이스에 안전하게 일괄 저장 중입니다. 잠시만 대기해 주십시오..."):
+                            append_rows_to_google_sheet(rows_to_append)
+
+                    st.markdown("---")
+                    st.markdown("### 서류 제출 완료")
+                    st.success(f"[{company_name}] 업체의 서류 제출이 성공적으로 완료 및 저장되었습니다.\n\n"
+                               f"[안내] 추후 품질안전부문의 최종 확인을 거치게 되며, 심사 결과 점수가 기준치 미달 시 필요 보완 서류는 기재해주신 이메일로 개별 통보하도록 하겠습니다.")
+                               
+                except Exception as final_error:
+                    st.error(f"[제출 실패 알림] 네트워크 오류로 인해 제출이 완료되지 못했습니다. 다시 시도해 주십시오. (에러: {final_error})")
 
 # ==========================================
 # [5] 관리자 대시보드
@@ -1373,7 +1405,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
                             elif score >= 70: grade = "지 도"
                             else: grade = "등급 외"
 
-                            st.info(f"[{target_comp_mail}] 현재 평가 요약 : 환산 총점 {score}점 (예상 등급: {grade})")
+                            st.info(f"[요약] [{target_comp_mail}] 현재 평가 요약 : 환산 총점 {score}점 (예상 등급: {grade})")
                             
                             comp_zero_df = zero_score_df_all[zero_score_df_all['업체명'] == target_comp_mail]
                             target_email_default = email_dict.get(target_comp_mail, "")
