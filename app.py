@@ -31,49 +31,51 @@ SCOPES = [
 GEMINI_MODEL_VISION = "gemini-3.6-flash"
 GEMINI_MODEL_CHAT = "gemini-3.5-flash-lite"
 
+# 2026년 기준 최신화 리스트 (거래중, 신규 필터링 완료: 190개)
 TARGET_COMPANIES = [
     "선택하세요",
-    "테트라팩(유)", "SIG Combibloc(인천세관장)", "에스아이지패키징코리아", "(주)한국팩키지",
-    "(주)케이아이비", "삼륭물산(주)", "(주)서일", "삼성포장", "국일피앤피 주식회사",
-    "명진포장(주)", "덕원기업", "현대이피 주식회사", "호명화학공업(주)", "신성이노텍(주) 음성공장",
-    "주식회사신원통상", "신성이노텍(주)", "희성폴리머(주)", "동원시스템즈(주)", "(주)피엠아이",
-    "(주)유래코", "(주)엘컴화인", "(주)유한산업", "주식회사 선일인더스트리", "에스알테크노팩(주)",
-    "고문당인쇄(주)", "삼육식품(천안)", "(주)서울에프엔비", "삼육네이처세븐", "(주)푸드코아",
-    "(주)참조은에스에프", "(주)아인츠푸드", "남양유업 경주공장_탈지,생크림", "비락(OEM)", "비락_진천",
-    "(주)한국씨엔에스팜", "합동산업(주)", "명가유업(주)_탈지,생크림", "(주)데어리젠", "동그린주식회사",
-    "유라가", "(주)제이앤이 아산공장", "풀무원다논(주)", "푸르밀", "(주)조흥", "(주)에스알인터내셔널",
-    "범산목장", "건국유업_상품", "유성씨앤에프(주)", "금성이엔씨(주)", "한화컴파운드(주)서울",
-    "헨켈코리아(유)", "새한실리켐(주)", "이팩킹(주)", "한국이콜랩(유)", "아쿠아테크코리아",
-    "(주)남강", "한국에이피이", "대덕가스(주)", "영천환경화학(주)", "웨이브티피에스",
-    "에스제이푸드", "제이에이치푸드앤케미칼서비스", "신창교역", "아그라나프루트코리아(주)",
-    "(유)사조CPK", "(주)코맥스인터내셔널", "롯데푸드(주) 파스퇴르", "롯데푸드(주) (유지)", "(주)바름",
-    "가우통상", "씨.에스에프(주)", "(주)나래에프앤씨", "(주)일신웰스", "(주)티알코리아", "동성글로벌",
-    "(주)진성에프엠", "(주)주피터인터내셔널", "(주)티오에프", "(주)비케이바이오", "다름인터내셔널",
-    "(주)제이케이뉴트라", "대종자임스", "본식품", "페트라", "성원에프원(법인)", "(주)선그린",
-    "(주)아로마에프아이", "미립물산(주)", "(주)엠에스씨", "웨스트마이크로", "이시푸드", "누리지에프에스",
-    "(주)네추럴웨이", "유맥", "기문물산", "해찬솔푸드", "(주)중앙타프라", "에스앤이티(주)", "(주)희창유업",
-    "(주)앤스에프에스", "프레시코", "(주)동은(탈지)", "(주)태영에프에이", "브랜탁코리아(주)",
-    "(주)뉴트렉스테크놀러지", "(주)삼익유가공", "주식회사 혜원", "제이에프에프(법인)", "주식회사 영푸드텍",
-    "녹스코리아(주)", "주식회사 제이씨월드(원료)", "남영상사주식회사", "송은통상(주)", "(주)빅솔반월공장",
-    "휴나텍", "케이피씨", "(주)와이씨에프", "서울향료(주)", "디에프아이", "티앤피코리아", "한국베름주식회사",
-    "(주)조향", "한국마쯔다니(주)", "영진염업사", "(주)삼화에프앤에프", "화인향료(주)", "성원에프아이",
-    "향림산업(주)", "삼정향료", "주식회사지금", "한빛향료", "삼인케미칼", "(주)한불화농", "베리에프앤비",
-    "주식회사 원아", "동서식품(주)", "아로마라인주식회사", "트라이콤바이오", "에이스향료", "제이제이글로벌",
-    "빙그레_원재료", "(주)세보글로벌", "에이치와이푸드텍", "(주)동광상사", "(주)제이스에프아이", "엔바이오텍",
-    "(주)네오크레마", "(주)성천", "신한솔루션 주식회사", "젤텍", "선경트레이딩(주)", "(주)건우에프피",
-    "아이비티 주식회사", "현진그린밀 (주)", "(주)에이치엠", "(주)제이더스화학", "롯데칠성(본사)", "서울우유",
-    "보락", "한국식품산업협회", "케이솔트(주)", "대우양봉영농조합법인", "라라스윗", "(주)제이에스켐트론",
-    "에프시아로마(주)", "(주)광일아산공장", "(주)한국카라겐", "(주)대평", "성지물산", "유일에프아이",
-    "(주)삼우티. 디", "농업회사법인 주식회사 보림제다", "(주)파이토메디", "코스맥스엔에스", "가우인터내셔널(주)",
-    "우리피엔에프", "유성식품", "(주)뉴웨이브코퍼레이션", "주식회사 앤앤피", "케이엔바이오", "제리와이(JY)유통",
-    "어니언즈 주식회사", "에이치엔바이오", "한가람지에프", "엠엔에스코리아", "주식회사 예산농산", "유니언상사",
-    "대상다이브스", "농업회사법인 수산북해", "리첼스코리아", "파텍상사", "솔시드", "신화트레이딩",
-    "인크레더블 주식회사", "(주)테크니아", "비전바이오켐", "가우리트레이딩", "제이원상사(신규)", "벤엘통상",
-    "프리맨뉴트라(유)", "피엠아이바이오텍", "비금농협", "(주)미트인터내셔날", "주식회사 태성", "(주)교토아이앤씨",
-    "가향", "(주)홀리스틱바이오", "(주)파르마코리아", "(주)뉴트리_원료", "메이", "농업회사법인 (주)보향다원",
-    "해인향료", "알프스", "(주)청우라이프사이언스", "(주)빅솔", "티지에프", "한미사이언스", "연두", "건강마을",
-    "OKF (진평)", "비오팜", "세종바이오팜", "희망그린식품", "노바렉스", "서흥", "코스맥스엔비티", "콜마BNH", "인성제약"
+    "테트라팩(유)", "SIG Combibloc(인천세관장)", "에스아이지패키징코리아", "㈜한국팩키지", "㈜케이아이비",
+    "삼륭물산㈜", "㈜서일", "삼성포장", "국일피앤피 주식회사", "명진포장(주)",
+    "덕원기업", "현대이피 주식회사", "호명화학공업㈜", "신성이노텍㈜ 음성공장", "주식회사신원통상",
+    "신성이노텍㈜", "희성폴리머㈜", "동원시스템즈㈜", "㈜피엠아이", "㈜유래코",
+    "㈜엘컴화인", "에스알테크노팩㈜", "고문당인쇄㈜", "삼육식품(천안)", "(주)서울에프엔비",
+    "(주)푸드코아", "(주)참조은에스에프", "(주)아인츠푸드", "남양유업 경주공장_탈지,생크림", "비락_진천",
+    "(주)한국씨엔에스팜", "합동산업(주)", "명가유업(주)_탈지.생크림", "㈜데어리젠", "동그린주식회사",
+    "유라가", "(주)제이앤이 아산공장", "푸르밀", "(주)조흥", "㈜에스알인터내셔널",
+    "범산목장", "건국유업_상품", "유성씨앤에프(주)", "금성이엔씨㈜", "새한실리켐㈜",
+    "한국이콜랩(유)", "㈜남강", "한국에이피이", "아그라나프루트코리아㈜", "(유)사조CPK",
+    "㈜코맥스인터내셔널", "롯데웰푸드(주) (유지)", "(주)바름", "씨.에스에프㈜", "(주)나래에프앤씨",
+    "㈜일신웰스", "(주)티알코리아", "동성글로벌", "㈜진성에프엠", "(주)주피터인터내셔널",
+    "㈜티오에프", "㈜비케이바이오", "㈜제이케이뉴트라", "대종자임스", "본식품",
+    "성원에프원(법인)", "(주)선그린", "㈜아로마에프아이", "미립물산㈜", "㈜엠에스씨",
+    "웨스트마이크로", "이시푸드", "누리지에프에스", "(주)네추럴웨이", "유맥",
+    "기문물산", "해찬솔푸드", "㈜중앙타프라", "에스앤이티(주)", "(주)희창유업",
+    "㈜앤스에프에스", "프레시코", "㈜동은(탈지)", "㈜태영에프에이", "브랜탁코리아㈜",
+    "㈜뉴트렉스테크놀러지", "(주)삼익유가공", "주식회사 혜원", "제이에프에프(법인)", "녹스코리아㈜",
+    "주식회사 제이씨월드(원료)", "남영상사주식회사", "송은통상㈜", "㈜빅솔반월공장", "휴나텍",
+    "케이피씨", "㈜와이씨에프", "서울향료㈜", "디에프아이", "티앤피코리아",
+    "한국베름주식회사", "㈜조향", "한국마쯔다니(주)", "㈜삼화에프앤에프", "화인향료㈜",
+    "성원에프아이", "향림산업㈜", "삼정향료", "주식회사지금", "한빛향료",
+    "삼인케미칼", "(주)한불화농", "베리에프앤비", "주식회사 원아", "아로마라인주식회사",
+    "트라이콤바이오", "에이스향료", "제이제이글로벌", "빙그레_원재료", "(주)세보글로벌",
+    "에이치와이푸드텍", "(주)동광상사", "㈜제이스에프아이", "엔바이오텍", "㈜네오크레마",
+    "㈜성천", "신한솔루션 주식회사", "젤텍", "선경트레이딩㈜", "(주)건우에프피",
+    "아이비티 주식회사", "현진그린밀 (주)", "(주)에이치엠", "㈜제이더스화학", "보락",
+    "케이솔트㈜", "㈜제이에스켐트론", "에프시아로마㈜", "㈜광일아산공장", "㈜한국카라겐",
+    "㈜대평", "성지물산", "유일에프아이", "(주)삼우티.디", "농업회사법인 주식회사 보림제다",
+    "(주)파이토메디", "코스맥스엔에스", "가우인터내셔날㈜", "우리피엔에프", "유성식품",
+    "(주)뉴웨이브코퍼레이션", "주식회사 앤앤피", "케이엔바이오", "제이와이(JY)유통", "어니언즈 주식회사",
+    "에이치엔바이오", "한가람지에프", "엠엔에스코리아", "주식회사 예산농산", "유니언상사",
+    "대상다이브스", "농업회사법인 수산복해", "리첼스코리아", "파텍상사", "솔시드",
+    "신화트레이딩", "인크레더블 주식회사", "㈜테크니아", "비전바이오켐", "가우리트레이딩",
+    "제이원상사(신규)", "벧엘통상", "프리맨뉴트라(유)", "피엠아이바이오텍", "비금농협",
+    "(주)미르인터내셔날", "주식회사 태성", "㈜교토아이엔씨", "가향", "㈜홀리스틱바이오",
+    "㈜파르마코리아", "㈜뉴트리_원료", "메이", "농업회사법인 ㈜보향다원", "해인향료",
+    "알프스", "(주)청우라이프사이언스", "㈜빅솔", "티지에프", "OKF (진행)"
 ]
+
+# 2026년 기준 추출된 업체 이메일 (담당자 수신확인 포함)
+DEFAULT_BULK_EMAILS = "kevin.kil@tetrapak.com, harris.kim@sig.biz, youngsam.moon@sig.biz, eshwang@hkpak.co.kr, gq555@naver.com, sapp912@srpack.com, seoil@si-straw.com, sam5501@hanmail.net, 0148ks@hanmail.net, mjcartonbox@nate.com, tg_kim@dukwontop.com0, terious1234@naver.com, bjmin65@naver.com, shinsung@shinsung82.co.kr, sinwon111@hanmail.net, my8490@hspd.co.kr, shimmanikr@dongwon.com, lsy@epmi.co.kr, dlqmdl77@naver.com, sales.h@finewt.com, qwemhs@srtechno.co.kr, jaeho@gomun.co.kr, cooliris01@naver.com, amx2006amx@seoulfnb.co.kr, thyun@foodcore.kr, dymin1117@chamjoeunsf.co.kr, einsfood@daum.net, dsc0620@namyangi.com, dhshin@vilac.co.kr, dltmddyd84@cnspharm.com, hqct@hdiepoca.com, young-155@daum.net, egreen11@eastgreen.co.kr, cpuya2002@hanmail.net, wjdgus8771@purmil.co.kr, mongtiz87@choheung.co.kr, y7777@sunrich.co.kr, yonggi@goodmilk.co.kr, okm1212@kkmh.co.kr, jej0218@ys79.com, ksenc21@ksenc.co.kr, ahs@sscc.kr, hyowon.lee@ecolab.com, hckeum@nkcc.co.kr, korape@daum.net, Tae-hun.HA@agrana.com, jungwhan.kim@sajo.co.kr, jy.13.park@gmail.com, kmsong4@lotte.net, buldoglee0@naver.com, csfkmg@csfood.com, naraee@naraee.com, sgbok@ise.co.kr, parkkp00@gmail.com, jun@dsbiz.co.kr, rktnr@jsfm.co.kr, jupitercs@jupiterintl.co.kr, sunny@tofkorea.com, jhcho@bkbio.com, main@jknutra.com, djzymes@naver.com, may7988@hanmail.net, sungwon4871@hanmail.net, sungreen@foodtrading.co.kr, sales@foodtrading.co.kr, aroma600@hanmail.net, ml.corp@milips.co.kr, lim1214@naver.com, kimhc1958@naver.com, ec1718@hanmail.net, nuri@nurifs.com, qkfkadmirna@naturalway.co.kr, khsshk89@umac.co.kr, ollie-boy@ki-moon.com, hcsfood@naver.com, kimkhj123@naver.com, c3122246@naver.com, jsshin@snet7.com, sunep@heechang.co.kr, ahnsfs0@naver.com, wjs13@freshico.co.kr, dongeun@defc.co.kr, mtkim9702@naver.com, robin.lee@brenntag-asia.com, jyjang@nutrex.co.kr, sesarr@samikdairy.com, haeom222@nate.com, aroma@jffaroma.com, yrlee@nocks.co.kr, jcw-kr@samjungflavor.co.kr, hglee@namyung.com, chulminkim@songeun.com, brian.na@vixxol.com, hunatech@hunatech.co.kr, ytw8484@naver.com, ycfinc@naver.com, kskim@seoulfnf.com, dfi899@hanmail.net, tnpjip@naver.com, jhoh2010@bereum.com, jw.lim@chohyang.co.kr, dmshin@matsutani.co.kr, sales@samhwafnf.co.kr, finekorea@finekorea.biz, mkkim@sungonefi.co.kr, jspark@hyangrim.co.kr, jslee@samjungflavor.co.kr, jigumsales@gmail.com, soondol2@hffaroma.com, saminkoreaco@gmail.com, kjh@fka.co.kr, verryfnb@gmail.com, wonacorp@gmail.com, csfjyy@csfood.com, kkj348@tricomkorea.com, ace@acefl.co.kr, dpark@jj-global.kr, hoon7500@bing.co.kr, wyshin@sbbiz.co.kr, hyfoodtech@naver.com, dksalt@dksalt.co.kr, jsmsales@jsmfood.com, sales@nbiotech.co.kr, mjoeon@cremar.co.kr, sbjeon@sungchun.co.kr, shinhan4199@naver.com, huo@geltech.co.kr, sales@sktkorea.com, naree8507@nate.com, bill@eibt.co.kr, queserz@food-green.co.kr, ykyun0131@gmail.com, jthus@jthus.co.kr, cykim@bolak.co.kr, kk1004kk81@gmail.com, skc@jschemtron.com, fcaroma53@naver.com, smchoi@kwangil.co.kr, sales@kocara.com, chunsh@daepyung.co.kr, sungjicor@hanmail.net, yuilfi@naver.com, khchoi@samwootd.com, piona1990@daum.net, jkhwang@yonsei.ac.kr, jangjihwan@cosmaxnbt.com, pje@gauinter.com, okniceyou@korea.com, hisballad@nate.com, nw-official@naver.com, nnpfnb@gmail.com, knbiocare@gmail.com, palduk5@naver.com, daoom@daoominter.com, hbio@hbio21.com, hangaramgf@hangaramgf.com, hmkim@mnskorea.net, yesanjam@naver.com, uniontradingkr@gmail.com, yst054@naver.com, bill@richealth.co.kr, jc@parteckcorp.com, smss1444@naver.com, shtrad@hanmail.net, dhkim@incredouble.com, msjung@techneer.com, minsu.kim@bision.co.kr, gauree@gauree.net, nanana9988@hanmail.net, betheltrade@naver.com, dean.yang@Freemennutra.com, lena.heo@pmibiotech.com, darling-i@hanmail.net, asca3812@mirinter.co.kr, taesung@tae-sung.com, info@gyoto.com, gh37@gahyang.kr, sojungkim@holisticbio.com, syi0603@parmakorea.co.kr, swseo@inewtree.com, mayjs1@naver.com, js.choi@bohyang.com, jhs20900@hanmail.net, dkpark@alfskorea.com, hyunse7@chungwools.com, hymkim@vixxol.com, sosung@dearfood.co.kr, samkim@okf.kr, rhkrwjdgur@yonseidairy.com"
 
 DOC_MAX_SCORES = {
     "[제조] (1) 영업신고": 5, "[제조] (2) 인증서": 3, "[제조] (3) 품목제조보고": 5, 
@@ -579,7 +581,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     dist_data["[유통] (3) 품목제조보고(국내)"] = render_upload_block("(3) 품목제조보고(국내) (배점 5점)", "df3", "제출 서류: 품목제조보고서 / 기준: 제품명, 유통기한 일치 여부", is_editable=False)
                 if t5:
                     dist_data["[유통] (4) 수입 관련 서류"] = render_upload_block("(4) 수입 관련 서류 (배점 10점)", "df4", "제출 서류: 수입신고필증 또는 수입신고확인증 / 기준: 통관 내역 적합 여부 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 판정 여부", is_editable=False)
+                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 여부", is_editable=False)
 
             exp_dist2_prefixes = ["df6", "df7", "df8", "df9", "df10"]
             exp_dist2_completed = get_completed_count(exp_dist2_prefixes)
@@ -1316,7 +1318,8 @@ elif menu == "관리자 업체관리 (메일 발송)":
                     st.markdown("### 정기 심사 일괄 안내 메일 발송")
                     st.caption("[안내] 시스템 내부에 저장된 이메일은 '한 번이라도 서류를 제출한 업체'의 이메일입니다. 미제출 업체에게 보내려면 이메일 주소를 직접 붙여넣어 수정하실 수 있습니다.")
                     
-                    default_emails = ", ".join(list(set(email_dict.values())))
+                    # 담당자님이 요청하신 190개 최신 이메일 리스트 + 본인 이메일 자동 세팅
+                    default_emails = DEFAULT_BULK_EMAILS
                     target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=default_emails, height=100)
                     
                     mail_subject_bulk = st.text_input("메일 제목:", value="[중요] 2026년도 연세유업 협력업체 정기 서류 심사 제출 안내")
