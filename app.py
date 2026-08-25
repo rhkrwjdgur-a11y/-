@@ -14,6 +14,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import gspread
+import concurrent.futures
 
 # ==========================================
 # [1] 시스템 기본 설정
@@ -578,7 +579,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     dist_data["[유통] (3) 품목제조보고(국내)"] = render_upload_block("(3) 품목제조보고(국내) (배점 5점)", "df3", "제출 서류: 품목제조보고서 / 기준: 제품명, 유통기한 일치 여부", is_editable=False)
                 if t5:
                     dist_data["[유통] (4) 수입 관련 서류"] = render_upload_block("(4) 수입 관련 서류 (배점 10점)", "df4", "제출 서류: 수입신고필증 또는 수입신고확인증 / 기준: 통관 내역 적합 여부 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 여부", is_editable=False)
+                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 판정 여부", is_editable=False)
 
             exp_dist2_prefixes = ["df6", "df7", "df8", "df9", "df10"]
             exp_dist2_completed = get_completed_count(exp_dist2_prefixes)
@@ -696,7 +697,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 dist_coa_files = st.file_uploader("위 표와 대조할 수입 COA 성적서 원본 업로드 (다중 파일 가능)", key="ddf_file", accept_multiple_files=True, disabled=dist_coa_na)
 
     # ==========================================
-    # 최종 통합 제출 버튼 (2단계 검증 로직 + 단일 일괄 저장 방어 로직)
+    # 최종 통합 제출 버튼 (2단계 검증 + 병렬 처리 속도 향상 + 단일 일괄 저장)
     # ==========================================
     st.markdown("<br><hr>", unsafe_allow_html=True)
     st.markdown("### 작성 완료 후 일괄 검증 제출")
@@ -741,7 +742,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
             # 2단계: 누락 판별 및 강제 제출 분기 (명확한 UI)
             if missing_alerts and not st.session_state.force_submit_warned:
-                st.error("[제출 보류] 필수 서류가 누락되었습니다.\n\n- " + "\n- ".join(missing_alerts))
+                st.error("[제출 보류] 필수 서류가 누락되었습니다:\n\n- " + "\n- ".join(missing_alerts))
                 st.warning("[안내] 서류가 존재하지 않아 제출할 수 없는 경우, 부적합(감점) 처리됨을 인지하셨다면 [최종 일괄 제출] 버튼을 한 번 더 눌러주십시오. 강제로 제출이 진행됩니다.")
                 st.session_state.force_submit_warned = True
             else:
@@ -867,9 +868,8 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                             rows_to_append.append(row_data)
                             my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {log['doc_name']} 데이터 구성 중...")
 
-                        # 2. AI 판독 및 파일 저장 항목 (절대 끊기지 않는 무중단 로직 적용)
-                        for task in tasks:
-                            current_idx += 1
+                        # 2. AI 판독 및 파일 저장 항목 (병렬 처리 적용으로 속도 대폭 향상)
+                        def process_task(task):
                             doc_name = task["doc_name"]
                             files_list = task["files"]
                             criteria = task["criteria"]
@@ -877,7 +877,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
                             drive_link_str = "첨부파일 업로드 오류"
                             try:
-                                # 파일 드라이브 업로드 (가장 최우선으로 실행하여 서류부터 확보)
                                 drive_links = []
                                 for f_idx, file_obj in enumerate(files_list):
                                     unique_id = f"{company_name}_{doc_name}_{current_time_str}_{f_idx}"
@@ -926,7 +925,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                                 2. 기준에 '(1개만 있어도 만점)'이 명시된 경우, 여러 서류 중 하나만 제출되어도 완벽한 것으로 간주합니다.
                                 {eval_instructions}"""
 
-                                # AI 판독 실패 시에도 시스템이 멈추지 않도록 개별 예외 처리
                                 try:
                                     judgment, reason, admin_score = analyze_documents_with_ai(prompt, files_list)
                                 except Exception as ai_error:
@@ -935,26 +933,35 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                                     admin_score = "0점 (재확인 필요)"
 
                                 row_data = [f"{company_name}_{doc_name}_{current_time_str}", formatted_time, company_name, doc_name, criteria, judgment, reason, admin_score, drive_link_str, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
-                                rows_to_append.append(row_data)
+                                return row_data
 
                             except Exception as e:
-                                # 드라이브 업로드 등 시스템 자체 에러 시 내역 보존
                                 row_data = [f"{company_name}_{doc_name}_{current_time_str}", formatted_time, company_name, doc_name, criteria, "제출 오류", f"파일 시스템 오류 발생: {e}", "0점 (재확인 필요)", drive_link_str, manager_name, manager_email, biz_type, delivered_items, cert_str, changes_str]
-                                rows_to_append.append(row_data)
+                                return row_data
 
-                            my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {doc_name} 파일 전송 및 처리 완료...")
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                            future_to_task = {executor.submit(process_task, task): task for task in tasks}
+                            for future in concurrent.futures.as_completed(future_to_task):
+                                task_info = future_to_task[future]
+                                try:
+                                    row_data = future.result()
+                                    rows_to_append.append(row_data)
+                                    current_idx += 1
+                                    my_bar.progress(current_idx / total_expected, text=f"({current_idx}/{total_expected}) {task_info['doc_name']} 파일 전송 및 처리 완료...")
+                                except Exception as exc:
+                                    st.error(f"[오류] {task_info['doc_name']} 처리 중 예외 발생: {exc}")
 
-                    my_bar.empty()
+                        my_bar.empty()
 
-                    # 3. 단 한 번의 통신으로 모든 데이터 구글 시트에 안전하게 일괄 저장
-                    if rows_to_append:
-                        with st.spinner("데이터베이스에 안전하게 일괄 저장 중입니다. 잠시만 대기해 주십시오..."):
-                            append_rows_to_google_sheet(rows_to_append)
+                        # 3. 단 한 번의 통신으로 모든 데이터 구글 시트에 안전하게 일괄 저장 (All-or-Nothing 무손실 보장)
+                        if rows_to_append:
+                            with st.spinner("데이터베이스에 안전하게 일괄 저장 중입니다. 잠시만 대기해 주십시오..."):
+                                append_rows_to_google_sheet(rows_to_append)
 
-                    st.markdown("---")
-                    st.markdown("### 서류 제출 완료")
-                    st.success(f"[{company_name}] 업체의 서류 제출이 성공적으로 완료 및 저장되었습니다.\n\n"
-                               f"[안내] 추후 품질안전부문의 최종 확인을 거치게 되며, 심사 결과 점수가 기준치 미달 시 필요 보완 서류는 기재해주신 이메일로 개별 통보하도록 하겠습니다.")
+                        st.markdown("---")
+                        st.markdown("### 서류 제출 완료")
+                        st.success(f"[{company_name}] 업체의 서류 제출이 성공적으로 완료 및 저장되었습니다.\n\n"
+                                   f"[안내] 추후 품질안전부문의 최종 확인을 거치게 되며, 심사 결과 점수가 기준치 미달 시 필요 보완 서류는 기재해주신 이메일로 개별 통보하도록 하겠습니다.")
                                
                 except Exception as final_error:
                     st.error(f"[제출 실패 알림] 네트워크 오류로 인해 제출이 완료되지 못했습니다. 다시 시도해 주십시오. (에러: {final_error})")
