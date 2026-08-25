@@ -74,8 +74,14 @@ TARGET_COMPANIES = [
     "알프스", "(주)청우라이프사이언스", "㈜빅솔", "티지에프", "OKF (진행)"
 ]
 
-# 2026년 기준 추출된 업체 이메일 (담당자 수신확인 포함)
-DEFAULT_BULK_EMAILS = "kevin.kil@tetrapak.com, harris.kim@sig.biz, youngsam.moon@sig.biz, eshwang@hkpak.co.kr, gq555@naver.com, sapp912@srpack.com, seoil@si-straw.com, sam5501@hanmail.net, 0148ks@hanmail.net, mjcartonbox@nate.com, tg_kim@dukwontop.com0, terious1234@naver.com, bjmin65@naver.com, shinsung@shinsung82.co.kr, sinwon111@hanmail.net, my8490@hspd.co.kr, shimmanikr@dongwon.com, lsy@epmi.co.kr, dlqmdl77@naver.com, sales.h@finewt.com, qwemhs@srtechno.co.kr, jaeho@gomun.co.kr, cooliris01@naver.com, amx2006amx@seoulfnb.co.kr, thyun@foodcore.kr, dymin1117@chamjoeunsf.co.kr, einsfood@daum.net, dsc0620@namyangi.com, dhshin@vilac.co.kr, dltmddyd84@cnspharm.com, hqct@hdiepoca.com, young-155@daum.net, egreen11@eastgreen.co.kr, cpuya2002@hanmail.net, wjdgus8771@purmil.co.kr, mongtiz87@choheung.co.kr, y7777@sunrich.co.kr, yonggi@goodmilk.co.kr, okm1212@kkmh.co.kr, jej0218@ys79.com, ksenc21@ksenc.co.kr, ahs@sscc.kr, hyowon.lee@ecolab.com, hckeum@nkcc.co.kr, korape@daum.net, Tae-hun.HA@agrana.com, jungwhan.kim@sajo.co.kr, jy.13.park@gmail.com, kmsong4@lotte.net, buldoglee0@naver.com, csfkmg@csfood.com, naraee@naraee.com, sgbok@ise.co.kr, parkkp00@gmail.com, jun@dsbiz.co.kr, rktnr@jsfm.co.kr, jupitercs@jupiterintl.co.kr, sunny@tofkorea.com, jhcho@bkbio.com, main@jknutra.com, djzymes@naver.com, may7988@hanmail.net, sungwon4871@hanmail.net, sungreen@foodtrading.co.kr, sales@foodtrading.co.kr, aroma600@hanmail.net, ml.corp@milips.co.kr, lim1214@naver.com, kimhc1958@naver.com, ec1718@hanmail.net, nuri@nurifs.com, qkfkadmirna@naturalway.co.kr, khsshk89@umac.co.kr, ollie-boy@ki-moon.com, hcsfood@naver.com, kimkhj123@naver.com, c3122246@naver.com, jsshin@snet7.com, sunep@heechang.co.kr, ahnsfs0@naver.com, wjs13@freshico.co.kr, dongeun@defc.co.kr, mtkim9702@naver.com, robin.lee@brenntag-asia.com, jyjang@nutrex.co.kr, sesarr@samikdairy.com, haeom222@nate.com, aroma@jffaroma.com, yrlee@nocks.co.kr, jcw-kr@samjungflavor.co.kr, hglee@namyung.com, chulminkim@songeun.com, brian.na@vixxol.com, hunatech@hunatech.co.kr, ytw8484@naver.com, ycfinc@naver.com, kskim@seoulfnf.com, dfi899@hanmail.net, tnpjip@naver.com, jhoh2010@bereum.com, jw.lim@chohyang.co.kr, dmshin@matsutani.co.kr, sales@samhwafnf.co.kr, finekorea@finekorea.biz, mkkim@sungonefi.co.kr, jspark@hyangrim.co.kr, jslee@samjungflavor.co.kr, jigumsales@gmail.com, soondol2@hffaroma.com, saminkoreaco@gmail.com, kjh@fka.co.kr, verryfnb@gmail.com, wonacorp@gmail.com, csfjyy@csfood.com, kkj348@tricomkorea.com, ace@acefl.co.kr, dpark@jj-global.kr, hoon7500@bing.co.kr, wyshin@sbbiz.co.kr, hyfoodtech@naver.com, dksalt@dksalt.co.kr, jsmsales@jsmfood.com, sales@nbiotech.co.kr, mjoeon@cremar.co.kr, sbjeon@sungchun.co.kr, shinhan4199@naver.com, huo@geltech.co.kr, sales@sktkorea.com, naree8507@nate.com, bill@eibt.co.kr, queserz@food-green.co.kr, ykyun0131@gmail.com, jthus@jthus.co.kr, cykim@bolak.co.kr, kk1004kk81@gmail.com, skc@jschemtron.com, fcaroma53@naver.com, smchoi@kwangil.co.kr, sales@kocara.com, chunsh@daepyung.co.kr, sungjicor@hanmail.net, yuilfi@naver.com, khchoi@samwootd.com, piona1990@daum.net, jkhwang@yonsei.ac.kr, jangjihwan@cosmaxnbt.com, pje@gauinter.com, okniceyou@korea.com, hisballad@nate.com, nw-official@naver.com, nnpfnb@gmail.com, knbiocare@gmail.com, palduk5@naver.com, daoom@daoominter.com, hbio@hbio21.com, hangaramgf@hangaramgf.com, hmkim@mnskorea.net, yesanjam@naver.com, uniontradingkr@gmail.com, yst054@naver.com, bill@richealth.co.kr, jc@parteckcorp.com, smss1444@naver.com, shtrad@hanmail.net, dhkim@incredouble.com, msjung@techneer.com, minsu.kim@bision.co.kr, gauree@gauree.net, nanana9988@hanmail.net, betheltrade@naver.com, dean.yang@Freemennutra.com, lena.heo@pmibiotech.com, darling-i@hanmail.net, asca3812@mirinter.co.kr, taesung@tae-sung.com, info@gyoto.com, gh37@gahyang.kr, sojungkim@holisticbio.com, syi0603@parmakorea.co.kr, swseo@inewtree.com, mayjs1@naver.com, js.choi@bohyang.com, jhs20900@hanmail.net, dkpark@alfskorea.com, hyunse7@chungwools.com, hymkim@vixxol.com, sosung@dearfood.co.kr, samkim@okf.kr, rhkrwjdgur@yonseidairy.com"
+# 2026년 기준 190개 업체 1:1 매칭용 이메일 문자열
+RAW_EMAILS_STR = "kevin.kil@tetrapak.com, harris.kim@sig.biz, youngsam.moon@sig.biz, eshwang@hkpak.co.kr, gq555@naver.com, sapp912@srpack.com, seoil@si-straw.com, sam5501@hanmail.net, 0148ks@hanmail.net, mjcartonbox@nate.com, tg_kim@dukwontop.com0, terious1234@naver.com, bjmin65@naver.com, shinsung@shinsung82.co.kr, sinwon111@hanmail.net, my8490@hspd.co.kr, shimmanikr@dongwon.com, lsy@epmi.co.kr, dlqmdl77@naver.com, sales.h@finewt.com, qwemhs@srtechno.co.kr, jaeho@gomun.co.kr, cooliris01@naver.com, amx2006amx@seoulfnb.co.kr, thyun@foodcore.kr, dymin1117@chamjoeunsf.co.kr, einsfood@daum.net, dsc0620@namyangi.com, dhshin@vilac.co.kr, dltmddyd84@cnspharm.com, hqct@hdiepoca.com, young-155@daum.net, egreen11@eastgreen.co.kr, cpuya2002@hanmail.net, wjdgus8771@purmil.co.kr, mongtiz87@choheung.co.kr, y7777@sunrich.co.kr, yonggi@goodmilk.co.kr, okm1212@kkmh.co.kr, jej0218@ys79.com, ksenc21@ksenc.co.kr, ahs@sscc.kr, hyowon.lee@ecolab.com, hckeum@nkcc.co.kr, korape@daum.net, Tae-hun.HA@agrana.com, jungwhan.kim@sajo.co.kr, jy.13.park@gmail.com, kmsong4@lotte.net, buldoglee0@naver.com, csfkmg@csfood.com, naraee@naraee.com, sgbok@ise.co.kr, parkkp00@gmail.com, jun@dsbiz.co.kr, rktnr@jsfm.co.kr, jupitercs@jupiterintl.co.kr, sunny@tofkorea.com, jhcho@bkbio.com, main@jknutra.com, djzymes@naver.com, may7988@hanmail.net, sungwon4871@hanmail.net, sungreen@foodtrading.co.kr, sales@foodtrading.co.kr, aroma600@hanmail.net, ml.corp@milips.co.kr, lim1214@naver.com, kimhc1958@naver.com, ec1718@hanmail.net, nuri@nurifs.com, qkfkadmirna@naturalway.co.kr, khsshk89@umac.co.kr, ollie-boy@ki-moon.com, hcsfood@naver.com, kimkhj123@naver.com, c3122246@naver.com, jsshin@snet7.com, sunep@heechang.co.kr, ahnsfs0@naver.com, wjs13@freshico.co.kr, dongeun@defc.co.kr, mtkim9702@naver.com, robin.lee@brenntag-asia.com, jyjang@nutrex.co.kr, sesarr@samikdairy.com, haeom222@nate.com, aroma@jffaroma.com, yrlee@nocks.co.kr, jcw-kr@samjungflavor.co.kr, hglee@namyung.com, chulminkim@songeun.com, brian.na@vixxol.com, hunatech@hunatech.co.kr, ytw8484@naver.com, ycfinc@naver.com, kskim@seoulfnf.com, dfi899@hanmail.net, tnpjip@naver.com, jhoh2010@bereum.com, jw.lim@chohyang.co.kr, dmshin@matsutani.co.kr, sales@samhwafnf.co.kr, finekorea@finekorea.biz, mkkim@sungonefi.co.kr, jspark@hyangrim.co.kr, jslee@samjungflavor.co.kr, jigumsales@gmail.com, soondol2@hffaroma.com, saminkoreaco@gmail.com, kjh@fka.co.kr, verryfnb@gmail.com, wonacorp@gmail.com, csfjyy@csfood.com, kkj348@tricomkorea.com, ace@acefl.co.kr, dpark@jj-global.kr, hoon7500@bing.co.kr, wyshin@sbbiz.co.kr, hyfoodtech@naver.com, dksalt@dksalt.co.kr, jsmsales@jsmfood.com, sales@nbiotech.co.kr, mjoeon@cremar.co.kr, sbjeon@sungchun.co.kr, shinhan4199@naver.com, huo@geltech.co.kr, sales@sktkorea.com, naree8507@nate.com, bill@eibt.co.kr, queserz@food-green.co.kr, ykyun0131@gmail.com, jthus@jthus.co.kr, cykim@bolak.co.kr, kk1004kk81@gmail.com, skc@jschemtron.com, fcaroma53@naver.com, smchoi@kwangil.co.kr, sales@kocara.com, chunsh@daepyung.co.kr, sungjicor@hanmail.net, yuilfi@naver.com, khchoi@samwootd.com, piona1990@daum.net, jkhwang@yonsei.ac.kr, jangjihwan@cosmaxnbt.com, pje@gauinter.com, okniceyou@korea.com, hisballad@nate.com, nw-official@naver.com, nnpfnb@gmail.com, knbiocare@gmail.com, palduk5@naver.com, daoom@daoominter.com, hbio@hbio21.com, hangaramgf@hangaramgf.com, hmkim@mnskorea.net, yesanjam@naver.com, uniontradingkr@gmail.com, yst054@naver.com, bill@richealth.co.kr, jc@parteckcorp.com, smss1444@naver.com, shtrad@hanmail.net, dhkim@incredouble.com, msjung@techneer.com, minsu.kim@bision.co.kr, gauree@gauree.net, nanana9988@hanmail.net, betheltrade@naver.com, dean.yang@Freemennutra.com, lena.heo@pmibiotech.com, darling-i@hanmail.net, asca3812@mirinter.co.kr, taesung@tae-sung.com, info@gyoto.com, gh37@gahyang.kr, sojungkim@holisticbio.com, syi0603@parmakorea.co.kr, swseo@inewtree.com, mayjs1@naver.com, js.choi@bohyang.com, jhs20900@hanmail.net, dkpark@alfskorea.com, hyunse7@chungwools.com, hymkim@vixxol.com, sosung@dearfood.co.kr, samkim@okf.kr"
+DEFAULT_BULK_EMAILS = RAW_EMAILS_STR + ", rhkrwjdgur@yonseidairy.com"
+
+# 업체명과 이메일 1:1 매칭 딕셔너리 생성
+raw_email_list = [e.strip() for e in RAW_EMAILS_STR.split(",")]
+COMPANY_EMAIL_DICT = dict(zip(TARGET_COMPANIES[1:], raw_email_list))
+COMPANY_EMAIL_DICT["담당자"] = "rhkrwjdgur@yonseidairy.com"
 
 DOC_MAX_SCORES = {
     "[제조] (1) 영업신고": 5, "[제조] (2) 인증서": 3, "[제조] (3) 품목제조보고": 5, 
@@ -260,6 +266,22 @@ def is_passed(row):
             return True
             
     return False
+
+def calculate_company_total_score(comp_all_df):
+    total_earned = 0
+    total_max = 0
+    for idx, record in comp_all_df.iterrows():
+        doc_name = str(record.get('심사항목', ''))
+        max_score = DOC_MAX_SCORES.get(doc_name, 0)
+        admin_score_str = str(record.get('관리자최종점수', '0점'))
+        if max_score > 0:
+            total_max += max_score
+            match = re.search(r'(\d+)점', admin_score_str)
+            earned = int(match.group(1)) if match else 0
+            earned = min(earned, max_score)
+            total_earned += earned
+    score = int((total_earned / total_max) * 100) if total_max > 0 else 0
+    return score
 
 def send_email(to_email, subject, body, attachment_file=None):
     available_keys = list(st.secrets.keys())
@@ -1057,26 +1079,10 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     company_scores = {}
                     for company in filtered_df['업체명'].unique():
                         comp_df = filtered_df[filtered_df['업체명'] == company]
-                        
-                        total_earned = 0
-                        total_max = 0
-                        
-                        for idx, record in comp_df.iterrows():
-                            doc_name = str(record.get('심사항목', ''))
-                            max_score = DOC_MAX_SCORES.get(doc_name, 0)
-                            admin_score_str = str(record.get('관리자최종점수', '0점'))
-                            
-                            if max_score > 0:
-                                total_max += max_score
-                                match = re.search(r'(\d+)점', admin_score_str)
-                                earned = int(match.group(1)) if match else 0
-                                earned = min(earned, max_score)
-                                total_earned += earned
-                        
-                        score = int((total_earned / total_max) * 100) if total_max > 0 else 0
+                        score = calculate_company_total_score(comp_df)
 
-                        if score >= 85: grade = "승인"
-                        elif score >= 70: grade = "지도"
+                        if score >= 85: grade = "승 인"
+                        elif score >= 70: grade = "지 도"
                         else: grade = "등급 외"
 
                         biz_type_val = comp_df['영업의종류'].iloc[-1] if '영업의종류' in comp_df.columns else ""
@@ -1089,13 +1095,13 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                             "item": item_val
                         }
 
-                    grade_counts = {"승인": 0, "지도": 0, "등급 외": 0}
+                    grade_counts = {"승 인": 0, "지 도": 0, "등급 외": 0}
                     for data in company_scores.values():
                         grade_counts[data["grade"]] += 1
 
                     top_table_data = [
-                        {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승인"], "조 치": "승 인"},
-                        {"등 급": "지 도", "점 수": "70 ~ 84점", "업 체 수": grade_counts["지도"], "조 치": "업체별 개선사항 피드백"},
+                        {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승 인"], "조 치": "승 인"},
+                        {"등 급": "지 도", "점 수": "70 ~ 84점", "업 체 수": grade_counts["지 도"], "조 치": "업체별 개선사항 피드백"},
                         {"등 급": "등급 외", "점 수": "70점미만, 미제출", "업 체 수": grade_counts["등급 외"], "조 치": "복수거래, 거래중지 등 검토"},
                         {"등 급": "합 계", "점 수": "", "업 체 수": sum(grade_counts.values()), "조 치": "-"}
                     ]
@@ -1302,29 +1308,23 @@ elif menu == "관리자 업체관리 (메일 발송)":
             all_data = worksheet.get_all_records()
             log_df = pd.DataFrame(all_data)
 
-            if log_df.empty:
-                st.warning("[안내] 등록된 업체 이메일 데이터가 없습니다.")
-            else:
-                email_dict = {}
-                for idx, row in log_df.dropna(subset=['업체명', '담당자이메일']).iterrows():
-                    comp = str(row['업체명']).strip()
-                    email = str(row['담당자이메일']).strip()
-                    if comp and email:
-                        email_dict[comp] = email
+            time_col = log_df.columns[1] if not log_df.empty else None
+            if not log_df.empty:
+                log_df[time_col] = pd.to_datetime(log_df[time_col], errors='coerce')
+                # 최신 제출 데이터만 남기고 중복 제거
+                log_df = log_df.sort_values(time_col, ascending=False).drop_duplicates(subset=['업체명', '심사항목'], keep='first')
 
-                tab_mail1, tab_mail2 = st.tabs(["일괄 안내 메일 발송 (전체 업체)", "미비 서류 보완 요청 메일 (개별 발송)"])
+            tab_mail1, tab_mail2, tab_mail3 = st.tabs(["일괄 안내 메일 발송 (전체 업체)", "미비 서류 보완 요청 (85점 미만)", "미제출 업체 리마인드 발송"])
 
-                with tab_mail1:
-                    st.markdown("### 정기 심사 일괄 안내 메일 발송")
-                    st.caption("[안내] 시스템 내부에 저장된 이메일은 '한 번이라도 서류를 제출한 업체'의 이메일입니다. 미제출 업체에게 보내려면 이메일 주소를 직접 붙여넣어 수정하실 수 있습니다.")
-                    
-                    # 담당자님이 요청하신 190개 최신 이메일 리스트 + 본인 이메일 자동 세팅
-                    default_emails = DEFAULT_BULK_EMAILS
-                    target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=default_emails, height=100)
-                    
-                    mail_subject_bulk = st.text_input("메일 제목:", value="[중요] 2026년도 연세유업 협력업체 정기 서류 심사 제출 안내")
-                    
-                    default_bulk_body = """안녕하십니까,
+            with tab_mail1:
+                st.markdown("### 정기 심사 일괄 안내 메일 발송")
+                st.caption("[안내] 2026년 기준 '거래중', '신규'로 등록된 190개 업체의 이메일이 자동으로 세팅되어 있습니다. 수신자 목록은 직접 수정하실 수 있습니다.")
+                
+                target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=DEFAULT_BULK_EMAILS, height=100)
+                
+                mail_subject_bulk = st.text_input("메일 제목:", value="[중요] 2026년도 연세유업 협력업체 정기 서류 심사 제출 안내")
+                
+                default_bulk_body = """안녕하십니까,
 연세유업 아산공장 품질안전부문 식품안전팀 곽정혁입니다.
 
 연세유업과 협력업체에서 생산되는 모든 제품의 품질 향상을 목적으로 당사 구매업무 관리 규정에 따라 '2026년도 협력업체 정기 서류 심사'를 실시하오니 적극적인 협조 부탁드립니다.
@@ -1346,79 +1346,67 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
 감사합니다."""
 
-                    mail_body_bulk = st.text_area("메일 내용 (텍스트 또는 HTML):", value=default_bulk_body, height=300)
-                    bulk_attachment = st.file_uploader("안내 메일 첨부파일 (시스템 매뉴얼 등, 선택사항)", key="bulk_attach")
+                mail_body_bulk = st.text_area("메일 내용 (텍스트 또는 HTML):", value=default_bulk_body, height=300)
+                bulk_attachment = st.file_uploader("안내 메일 첨부파일 (시스템 매뉴얼 등, 선택사항)", key="bulk_attach")
 
-                    if st.button("안내 메일 일괄 전송", type="primary"):
-                        email_list = [e.strip() for e in target_emails_input.split(",") if e.strip()]
-                        if not email_list:
-                            st.error("발송할 이메일 주소가 없습니다.")
-                        else:
-                            progress_text = "메일을 발송하고 있습니다..."
-                            mail_bar = st.progress(0, text=progress_text)
-                            success_count = 0
-                            
-                            for i, recipient in enumerate(email_list):
-                                success, msg = send_email(recipient, mail_subject_bulk, mail_body_bulk.replace('\n', '<br>'), bulk_attachment)
-                                if success:
-                                    success_count += 1
-                                else:
-                                    st.error(f"[발송 실패 진단] {recipient} : {msg}")
-                                mail_bar.progress((i + 1) / len(email_list), text=f"{recipient} 발송 중...")
-                                
-                            mail_bar.empty()
-                            st.success(f"[성공] 총 {len(email_list)}개 중 {success_count}개의 이메일이 성공적으로 발송되었습니다.")
-
-                with tab_mail2:
-                    st.markdown("### 미비 서류 보완 요청 메일 발송")
-                    st.caption("[안내] 심사 결과 '미비' 처리된 항목이 있는 업체를 선택하여 보완 요청 메일을 발송합니다.")
-                    
-                    def is_deducted_mail(row):
-                        score_str = str(row.get('관리자최종점수', '0점'))
-                        if "해당사항 없음" in score_str or "NA예외" in score_str or "사유누락" in score_str: return False
-                        if "만점" in score_str or "통과" in score_str or "적합" in score_str: return False
-                        if "최종확정" in score_str: return False
-                        
-                        doc_name = str(row.get('심사항목', ''))
-                        max_score = DOC_MAX_SCORES.get(doc_name, 0)
-                        if max_score > 0:
-                            match = re.search(r'(\d+)점', score_str)
-                            earned = int(match.group(1)) if match else 0
-                            if earned >= max_score: return False
-                        return True
-
-                    zero_score_df_all = log_df[log_df.apply(is_deducted_mail, axis=1)]
-                    
-                    if zero_score_df_all.empty:
-                        st.info("현재 보완을 요청할 미비 서류(감점)가 존재하는 대기 업체가 없습니다.")
+                if st.button("안내 메일 일괄 전송", type="primary"):
+                    email_list = [e.strip() for e in target_emails_input.split(",") if e.strip()]
+                    if not email_list:
+                        st.error("발송할 이메일 주소가 없습니다.")
                     else:
-                        target_comp_mail = st.selectbox("보완 요청을 보낼 업체를 선택하세요:", ["선택하세요"] + list(zero_score_df_all['업체명'].unique()))
+                        progress_text = "메일을 발송하고 있습니다..."
+                        mail_bar = st.progress(0, text=progress_text)
+                        success_count = 0
+                        
+                        for i, recipient in enumerate(email_list):
+                            success, msg = send_email(recipient, mail_subject_bulk, mail_body_bulk.replace('\n', '<br>'), bulk_attachment)
+                            if success:
+                                success_count += 1
+                            else:
+                                st.error(f"[발송 실패 진단] {recipient} : {msg}")
+                            mail_bar.progress((i + 1) / len(email_list), text=f"{recipient} 발송 중...")
+                            
+                        mail_bar.empty()
+                        st.success(f"[성공] 총 {len(email_list)}개 중 {success_count}개의 이메일이 성공적으로 발송되었습니다.")
+
+            with tab_mail2:
+                st.markdown("### 미비 서류 보완 요청 메일 발송 (85점 미만)")
+                st.caption("[안내] 심사 결과 감점 항목이 존재하며, **환산 총점이 85점 미만(지도, 등급 외)인 업체**만 자동으로 필터링되어 노출됩니다.")
+                
+                if log_df.empty:
+                    st.info("현재 심사를 제출한 업체 데이터가 없습니다.")
+                else:
+                    # 보완 요청 대상 업체 추출 (85점 미만)
+                    under_85_companies = []
+                    for c in log_df['업체명'].dropna().unique():
+                        comp_df = log_df[log_df['업체명'] == c]
+                        score = calculate_company_total_score(comp_df)
+                        if score < 85:
+                            under_85_companies.append(c)
+
+                    zero_score_df_all = log_df[log_df.apply(is_deducted, axis=1)]
+                    zero_score_df_under_85 = zero_score_df_all[zero_score_df_all['업체명'].isin(under_85_companies)]
+                    
+                    if zero_score_df_under_85.empty:
+                        st.success("현재 총점 85점 미만인 보완 요청 대상 업체가 없습니다.")
+                    else:
+                        target_comp_mail = st.selectbox("보완 요청을 보낼 업체를 선택하세요:", ["선택하세요"] + list(zero_score_df_under_85['업체명'].unique()))
                         
                         if target_comp_mail != "선택하세요":
                             comp_all_df = log_df[log_df['업체명'] == target_comp_mail]
+                            score = calculate_company_total_score(comp_all_df)
                             
-                            total_earned = 0
-                            total_max = 0
-                            for idx, record in comp_all_df.iterrows():
-                                doc_name = str(record.get('심사항목', ''))
-                                max_score = DOC_MAX_SCORES.get(doc_name, 0)
-                                admin_score_str = str(record.get('관리자최종점수', '0점'))
-                                if max_score > 0:
-                                    total_max += max_score
-                                    match = re.search(r'(\d+)점', admin_score_str)
-                                    earned = int(match.group(1)) if match else 0
-                                    earned = min(earned, max_score)
-                                    total_earned += earned
-                            
-                            score = int((total_earned / total_max) * 100) if total_max > 0 else 0
-                            if score >= 85: grade = "승 인"
-                            elif score >= 70: grade = "지 도"
+                            if score >= 70: grade = "지 도"
                             else: grade = "등급 외"
 
                             st.info(f"[요약] [{target_comp_mail}] 현재 평가 요약 : 환산 총점 {score}점 (예상 등급: {grade})")
                             
-                            comp_zero_df = zero_score_df_all[zero_score_df_all['업체명'] == target_comp_mail]
-                            target_email_default = email_dict.get(target_comp_mail, "")
+                            comp_zero_df = zero_score_df_under_85[zero_score_df_under_85['업체명'] == target_comp_mail]
+                            
+                            # 내부 딕셔너리에서 이메일 조회 (없으면 시트 최근 기록에서 조회)
+                            target_email_default = COMPANY_EMAIL_DICT.get(target_comp_mail, "")
+                            if not target_email_default and '담당자이메일' in comp_all_df.columns:
+                                target_email_default = comp_all_df['담당자이메일'].dropna().iloc[-1]
                             
                             final_target_email = st.text_input("수신자 이메일 (직접 수정 가능):", value=target_email_default)
                             
@@ -1456,6 +1444,64 @@ elif menu == "관리자 업체관리 (메일 발송)":
                                             update_google_sheet_admin_score(uid, new_score)
                                 st.success(f"[성공] {target_comp_mail} 업체의 심사가 최종 확정되어 대기 목록에서 제외되었습니다.")
                                 st.rerun()
+
+            with tab_mail3:
+                st.markdown("### 미제출 업체 리마인드 메일 발송")
+                st.caption("[안내] 심사 대상 190개 업체 중, 현재까지 시스템을 통해 **서류를 제출하지 않은 대기 업체**만 시스템이 자동으로 추려 이메일을 세팅합니다.")
+                
+                submitted_set = set(log_df['업체명'].dropna().unique()) if not log_df.empty else set()
+                pending_companies = [c for c in TARGET_COMPANIES if c != "선택하세요" and c not in submitted_set]
+                
+                st.info(f"**현재 미제출 업체 수:** {len(pending_companies)}개")
+                
+                # 내부 딕셔너리에서 미제출 업체의 이메일만 추출
+                pending_emails = [COMPANY_EMAIL_DICT.get(c, "") for c in pending_companies if COMPANY_EMAIL_DICT.get(c, "")]
+                
+                # 수신 확인을 위해 담당자 이메일 필수 포함
+                if "rhkrwjdgur@yonseidairy.com" not in pending_emails:
+                    pending_emails.append("rhkrwjdgur@yonseidairy.com")
+                
+                target_emails_input_remind = st.text_area("미제출 수신자 이메일 목록 (쉼표로 구분):", value=", ".join(pending_emails), height=100)
+                
+                mail_subject_remind = st.text_input("리마인드 메일 제목:", value="[긴급/리마인드] 2026년도 연세유업 협력업체 서류 심사 제출 촉구 안내")
+                
+                default_remind_body = """안녕하십니까,
+연세유업 아산공장 품질안전부문 식품안전팀 곽정혁입니다.
+
+당사에서 안내해 드린 '2026년도 협력업체 정기 서류 심사'와 관련하여, 현재 귀사의 서류 제출 내역이 시스템 상에 확인되지 않고 있어 긴급하게 리마인드 메일을 드립니다.
+
+기한 내 미제출 시 평가 시스템 규정에 따라 감점 및 부적합 처리 등 불이익이 발생할 수 있으니, 조속한 시일 내에 서류를 제출하여 주시기 바랍니다.
+
+■ 서류 제출 기한: 2026년 9월 11일(금)까지
+■ 시스템 접속 링크: https://9yhkkjjyezju9w5bxsdhxd.streamlit.app/
+
+시스템 이용에 어려움이 있으실 경우, 화면 좌측의 '서류 제출 지침 문의 챗봇'을 우선적으로 활용해 주시길 부탁드립니다.
+불가피한 사유로 기한 내 제출이 어려우신 경우에는 본 메일(rhkrwjdgur@yonseidairy.com)로 즉시 회신해 주시기 바랍니다.
+
+감사합니다."""
+
+                mail_body_remind = st.text_area("리마인드 메일 내용 (텍스트 또는 HTML):", value=default_remind_body, height=300)
+                remind_attachment = st.file_uploader("리마인드 메일 첨부파일 (선택사항)", key="remind_attach")
+
+                if st.button("리마인드 메일 일괄 전송", type="primary"):
+                    email_list_remind = [e.strip() for e in target_emails_input_remind.split(",") if e.strip()]
+                    if not email_list_remind:
+                        st.error("발송할 이메일 주소가 없습니다.")
+                    else:
+                        progress_text_rm = "리마인드 메일을 발송하고 있습니다..."
+                        mail_bar_rm = st.progress(0, text=progress_text_rm)
+                        success_count_rm = 0
+                        
+                        for i, recipient in enumerate(email_list_remind):
+                            success, msg = send_email(recipient, mail_subject_remind, mail_body_remind.replace('\n', '<br>'), remind_attachment)
+                            if success:
+                                success_count_rm += 1
+                            else:
+                                st.error(f"[발송 실패 진단] {recipient} : {msg}")
+                            mail_bar_rm.progress((i + 1) / len(email_list_remind), text=f"{recipient} 발송 중...")
+                            
+                        mail_bar_rm.empty()
+                        st.success(f"[성공] 총 {len(email_list_remind)}개 중 {success_count_rm}개의 리마인드 이메일이 성공적으로 발송되었습니다.")
 
         except Exception as e:
             st.error(f"[오류] 데이터베이스 연결 실패: {e}")
