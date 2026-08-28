@@ -31,7 +31,7 @@ SCOPES = [
 GEMINI_MODEL_VISION = "gemini-3.6-flash"
 GEMINI_MODEL_CHAT = "gemini-3.5-flash-lite"
 
-# 2026년 기준 최신화 리스트 (거래중, 신규 필터링 완료: 190개)
+# 2026년 기준 최신화 리스트 (거래중, 신규 필터링 완료 / OKF 제외: 189개)
 TARGET_COMPANIES = [
     "선택하세요",
     "테트라팩(유)", "SIG Combibloc(인천세관장)", "에스아이지패키징코리아", "㈜한국팩키지", "㈜케이아이비",
@@ -71,10 +71,10 @@ TARGET_COMPANIES = [
     "제이원상사(신규)", "벧엘통상", "프리맨뉴트라(유)", "피엠아이바이오텍", "비금농협",
     "(주)미르인터내셔날", "주식회사 태성", "㈜교토아이엔씨", "가향", "㈜홀리스틱바이오",
     "㈜파르마코리아", "㈜뉴트리_원료", "메이", "농업회사법인 ㈜보향다원", "해인향료",
-    "알프스", "(주)청우라이프사이언스", "㈜빅솔", "티지에프", "OKF (진행)"
+    "알프스", "(주)청우라이프사이언스", "㈜빅솔", "티지에프"
 ]
 
-# 2026년 기준 190개 업체 1:1 매칭용 딕셔너리
+# 2026년 기준 189개 업체 1:1 매칭용 딕셔너리 (대상다이브스 추가, OKF 삭제 완료)
 COMPANY_EMAIL_DICT = {
     "테트라팩(유)": "kevin.kil@tetrapak.com", "SIG Combibloc(인천세관장)": "harris.kim@sig.biz",
     "에스아이지패키징코리아": "youngsam.moon@sig.biz", "㈜한국팩키지": "eshwang@hkpak.co.kr",
@@ -156,7 +156,7 @@ COMPANY_EMAIL_DICT = {
     "제이와이(JY)유통": "palduk5@naver.com", "어니언즈 주식회사": "daoom@daoominter.com",
     "에이치엔바이오": "hbio@hbio21.com", "한가람지에프": "hangaramgf@hangaramgf.com",
     "엠엔에스코리아": "hmkim@mnskorea.net", "주식회사 예산농산": "yesanjam@naver.com",
-    "유니언상사": "uniontradingkr@gmail.com", "대상다이브스": "",
+    "유니언상사": "uniontradingkr@gmail.com", "대상다이브스": "yang_juyoung@daesang.com",
     "농업회사법인 수산복해": "yst054@naver.com", "리첼스코리아": "bill@richealth.co.kr",
     "파텍상사": "jc@parteckcorp.com", "솔시드": "smss1444@naver.com",
     "신화트레이딩": "shtrad@hanmail.net", "인크레더블 주식회사": "dhkim@incredouble.com",
@@ -170,13 +170,12 @@ COMPANY_EMAIL_DICT = {
     "㈜뉴트리_원료": "swseo@inewtree.com", "메이": "mayjs1@naver.com",
     "농업회사법인 ㈜보향다원": "js.choi@bohyang.com", "해인향료": "jhs20900@hanmail.net",
     "알프스": "dkpark@alfskorea.com", "(주)청우라이프사이언스": "hyunse7@chungwools.com",
-    "㈜빅솔": "hymkim@vixxol.com", "티지에프": "sosung@dearfood.co.kr",
-    "OKF (진행)": "samkim@okf.kr"
+    "㈜빅솔": "hymkim@vixxol.com", "티지에프": "sosung@dearfood.co.kr"
 }
 COMPANY_EMAIL_DICT["담당자"] = "rhkrwjdgur@yonseidairy.com"
 
-# 에러 없는 클리닝된 189개 이메일 세팅 (제이앤이 이메일 포함, 중복 제외, 담당자 포함)
-DEFAULT_BULK_EMAILS_CLEANED = 'kevin.kil@tetrapak.com, harris.kim@sig.biz, youngsam.moon@sig.biz, eshwang@hkpak.co.kr, gq555@naver.com, sapp912@srpack.com, seoil@si-straw.com, sam5501@hanmail.net, 0148ks@hanmail.net, mjcartonbox@nate.com, tg_kim@dukwontop.com0, terious1234@naver.com, bjmin65@naver.com, shinsung@shinsung82.co.kr, sinwon111@hanmail.net, my8490@hspd.co.kr, shimmanikr@dongwon.com, lsy@epmi.co.kr, dlqmdl77@naver.com, sales.h@finewt.com, qwemhs@srtechno.co.kr, jaeho@gomun.co.kr, cooliris01@naver.com, amx2006amx@seoulfnb.co.kr, thyun@foodcore.kr, dymin1117@chamjoeunsf.co.kr, einsfood@daum.net, dsc0620@namyangi.com, dhshin@vilac.co.kr, dltmddyd84@cnspharm.com, hqct@hdiepoca.com, young-155@daum.net, woong5156@dairyzen.co.kr, egreen11@eastgreen.co.kr, cpuya2002@hanmail.net, kyj8810@jnekorea.com, wjdgus8771@purmil.co.kr, mongtiz87@choheung.co.kr, y7777@sunrich.co.kr, yonggi@goodmilk.co.kr, okm1212@kkmh.co.kr, jej0218@ys79.com, ksenc21@ksenc.co.kr, ahs@sscc.kr, hyowon.lee@ecolab.com, hckeum@nkcc.co.kr, korape@daum.net, Tae-hun.HA@agrana.com, jungwhan.kim@sajo.co.kr, jy.13.park@gmail.com, kmsong4@lotte.net, buldoglee0@naver.com, csfkmg@csfood.com, naraee@naraee.com, sgbok@ise.co.kr, parkkp00@gmail.com, jun@dsbiz.co.kr, rktnr@jsfm.co.kr, jupitercs@jupiterintl.co.kr, sunny@tofkorea.com, jhcho@bkbio.com, main@jknutra.com, djzymes@naver.com, may7988@hanmail.net, sungwon4871@hanmail.net, sungreen@foodtrading.co.kr, aroma600@hanmail.net, ml.corp@milips.co.kr, lim1214@naver.com, kimhc1958@naver.com, ec1718@hanmail.net, nuri@nurifs.com, qkfkadmirna@naturalway.co.kr, khsshk89@umac.co.kr, ollie-boy@ki-moon.com, hcsfood@naver.com, kimkhj123@naver.com, c3122246@naver.com, jsshin@snet7.com, sunep@heechang.co.kr, ahnsfs0@naver.com, wjs13@freshico.co.kr, dongeun@defc.co.kr, mtkim9702@naver.com, robin.lee@brenntag-asia.com, jyjang@nutrex.co.kr, sesarr@samikdairy.com, haeom222@nate.com, aroma@jffaroma.com, yrlee@nocks.co.kr, jcw-kr@samjungflavor.co.kr, hglee@namyung.com, chulminkim@songeun.com, brian.na@vixxol.com, hunatech@hunatech.co.kr, ytw8484@naver.com, ycfinc@naver.com, kskim@seoulfnf.com, dfi899@hanmail.net, tnpjip@naver.com, jhoh2010@bereum.com, jw.lim@chohyang.co.kr, dmshin@matsutani.co.kr, sales@samhwafnf.co.kr, finekorea@finekorea.biz, mkkim@sungonefi.co.kr, jspark@hyangrim.co.kr, jslee@samjungflavor.co.kr, jigumsales@gmail.com, soondol2@hffaroma.com, saminkoreaco@gmail.com, kjh@fka.co.kr, verryfnb@gmail.com, wonacorp@gmail.com, csfjyy@csfood.com, kkj348@tricomkorea.com, ace@acefl.co.kr, dpark@jj-global.kr, hoon7500@bing.co.kr, wyshin@sbbiz.co.kr, hyfoodtech@naver.com, dksalt@dksalt.co.kr, jsmsales@jsmfood.com, sales@nbiotech.co.kr, mjoeon@cremar.co.kr, sbjeon@sungchun.co.kr, shinhan4199@naver.com, huo@geltech.co.kr, sales@sktkorea.com, naree8507@nate.com, bill@eibt.co.kr, queserz@food-green.co.kr, ykyun0131@gmail.com, jthus@jthus.co.kr, cykim@bolak.co.kr, kk1004kk81@gmail.com, skc@jschemtron.com, fcaroma53@naver.com, smchoi@kwangil.co.kr, sales@kocara.com, chunsh@daepyung.co.kr, sungjicor@hanmail.net, yuilfi@naver.com, khchoi@samwootd.com, piona1990@daum.net, jkhwang@yonsei.ac.kr, jangjihwan@cosmaxnbt.com, pje@gauinter.com, okniceyou@korea.com, hisballad@nate.com, nw-official@naver.com, nnpfnb@gmail.com, knbiocare@gmail.com, palduk5@naver.com, daoom@daoominter.com, hbio@hbio21.com, hangaramgf@hangaramgf.com, hmkim@mnskorea.net, yesanjam@naver.com, uniontradingkr@gmail.com, yst054@naver.com, jc@parteckcorp.com, smss1444@naver.com, shtrad@hanmail.net, dhkim@incredouble.com, msjung@techneer.com, minsu.kim@bision.co.kr, gauree@gauree.net, nanana9988@hanmail.net, betheltrade@naver.com, dean.yang@Freemennutra.com, lena.heo@pmibiotech.com, darling-i@hanmail.net, asca3812@mirinter.co.kr, taesung@tae-sung.com, info@gyoto.com, gh37@gahyang.kr, sojungkim@holisticbio.com, syi0603@parmakorea.co.kr, swseo@inewtree.com, mayjs1@naver.com, js.choi@bohyang.com, jhs20900@hanmail.net, dkpark@alfskorea.com, hyunse7@chungwools.com, hymkim@vixxol.com, sosung@dearfood.co.kr, samkim@okf.kr, rhkrwjdgur@yonseidairy.com'
+# 에러 없는 클리닝된 189개 이메일 세팅 (제이앤이, 대상다이브스 포함 / OKF 삭제 / 중복 제외 188개 + 담당자 1개)
+DEFAULT_BULK_EMAILS_CLEANED = 'kevin.kil@tetrapak.com, harris.kim@sig.biz, youngsam.moon@sig.biz, eshwang@hkpak.co.kr, gq555@naver.com, sapp912@srpack.com, seoil@si-straw.com, sam5501@hanmail.net, 0148ks@hanmail.net, mjcartonbox@nate.com, tg_kim@dukwontop.com0, terious1234@naver.com, bjmin65@naver.com, shinsung@shinsung82.co.kr, sinwon111@hanmail.net, my8490@hspd.co.kr, shimmanikr@dongwon.com, lsy@epmi.co.kr, dlqmdl77@naver.com, sales.h@finewt.com, qwemhs@srtechno.co.kr, jaeho@gomun.co.kr, cooliris01@naver.com, amx2006amx@seoulfnb.co.kr, thyun@foodcore.kr, dymin1117@chamjoeunsf.co.kr, einsfood@daum.net, dsc0620@namyangi.com, dhshin@vilac.co.kr, dltmddyd84@cnspharm.com, hqct@hdiepoca.com, young-155@daum.net, woong5156@dairyzen.co.kr, egreen11@eastgreen.co.kr, cpuya2002@hanmail.net, kyj8810@jnekorea.com, wjdgus8771@purmil.co.kr, mongtiz87@choheung.co.kr, y7777@sunrich.co.kr, yonggi@goodmilk.co.kr, okm1212@kkmh.co.kr, jej0218@ys79.com, ksenc21@ksenc.co.kr, ahs@sscc.kr, hyowon.lee@ecolab.com, hckeum@nkcc.co.kr, korape@daum.net, Tae-hun.HA@agrana.com, jungwhan.kim@sajo.co.kr, jy.13.park@gmail.com, kmsong4@lotte.net, buldoglee0@naver.com, csfkmg@csfood.com, naraee@naraee.com, sgbok@ise.co.kr, parkkp00@gmail.com, jun@dsbiz.co.kr, rktnr@jsfm.co.kr, jupitercs@jupiterintl.co.kr, sunny@tofkorea.com, jhcho@bkbio.com, main@jknutra.com, djzymes@naver.com, may7988@hanmail.net, sungwon4871@hanmail.net, sungreen@foodtrading.co.kr, aroma600@hanmail.net, ml.corp@milips.co.kr, lim1214@naver.com, kimhc1958@naver.com, ec1718@hanmail.net, nuri@nurifs.com, qkfkadmirna@naturalway.co.kr, khsshk89@umac.co.kr, ollie-boy@ki-moon.com, hcsfood@naver.com, c3122246@naver.com, jsshin@snet7.com, sunep@heechang.co.kr, ahnsfs0@naver.com, wjs13@freshico.co.kr, dongeun@defc.co.kr, mtkim9702@naver.com, robin.lee@brenntag-asia.com, jyjang@nutrex.co.kr, sesarr@samikdairy.com, haeom222@nate.com, aroma@jffaroma.com, yrlee@nocks.co.kr, jcw-kr@samjungflavor.co.kr, hglee@namyung.com, chulminkim@songeun.com, brian.na@vixxol.com, hunatech@hunatech.co.kr, ytw8484@naver.com, ycfinc@naver.com, kskim@seoulfnf.com, dfi899@hanmail.net, tnpjip@naver.com, jhoh2010@bereum.com, jw.lim@chohyang.co.kr, dmshin@matsutani.co.kr, sales@samhwafnf.co.kr, finekorea@finekorea.biz, mkkim@sungonefi.co.kr, jspark@hyangrim.co.kr, jslee@samjungflavor.co.kr, jigumsales@gmail.com, soondol2@hffaroma.com, saminkoreaco@gmail.com, kjh@fka.co.kr, verryfnb@gmail.com, wonacorp@gmail.com, csfjyy@csfood.com, kkj348@tricomkorea.com, ace@acefl.co.kr, dpark@jj-global.kr, hoon7500@bing.co.kr, wyshin@sbbiz.co.kr, hyfoodtech@naver.com, dksalt@dksalt.co.kr, jsmsales@jsmfood.com, sales@nbiotech.co.kr, mjoeon@cremar.co.kr, sbjeon@sungchun.co.kr, shinhan4199@naver.com, huo@geltech.co.kr, sales@sktkorea.com, naree8507@nate.com, bill@eibt.co.kr, queserz@food-green.co.kr, ykyun0131@gmail.com, jthus@jthus.co.kr, cykim@bolak.co.kr, kk1004kk81@gmail.com, skc@jschemtron.com, fcaroma53@naver.com, smchoi@kwangil.co.kr, sales@kocara.com, chunsh@daepyung.co.kr, sungjicor@hanmail.net, yuilfi@naver.com, khchoi@samwootd.com, piona1990@daum.net, jkhwang@yonsei.ac.kr, jangjihwan@cosmaxnbt.com, pje@gauinter.com, okniceyou@korea.com, hisballad@nate.com, nw-official@naver.com, nnpfnb@gmail.com, knbiocare@gmail.com, palduk5@naver.com, daoom@daoominter.com, hbio@hbio21.com, hangaramgf@hangaramgf.com, hmkim@mnskorea.net, yesanjam@naver.com, uniontradingkr@gmail.com, yang_juyoung@daesang.com, yst054@naver.com, jc@parteckcorp.com, smss1444@naver.com, shtrad@hanmail.net, dhkim@incredouble.com, msjung@techneer.com, minsu.kim@bision.co.kr, gauree@gauree.net, nanana9988@hanmail.net, betheltrade@naver.com, dean.yang@Freemennutra.com, lena.heo@pmibiotech.com, darling-i@hanmail.net, asca3812@mirinter.co.kr, taesung@tae-sung.com, info@gyoto.com, gh37@gahyang.kr, sojungkim@holisticbio.com, syi0603@parmakorea.co.kr, swseo@inewtree.com, mayjs1@naver.com, js.choi@bohyang.com, jhs20900@hanmail.net, dkpark@alfskorea.com, hyunse7@chungwools.com, hymkim@vixxol.com, sosung@dearfood.co.kr, rhkrwjdgur@yonseidairy.com'
 
 DOC_MAX_SCORES = {
     "[제조] (1) 영업신고": 5, "[제조] (2) 인증서": 3, "[제조] (3) 품목제조보고": 5, 
@@ -659,7 +658,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     mfg_data["[제조] (1) 공정관리"] = render_upload_block("(1) 공정관리 (배점 8점)", "mf21", "제출 서류: 각 공정별 CCP 일지 / 기준: 한계기준 100% 충족 및 누락 없을 것", is_editable=False)
                 mfg_data["[제조] (2) 완제품관리"] = render_upload_block("(2) 완제품관리 (배점 3점)", "mf22", "제출 서류: 완제품 검사 일지 / 기준: 규격 검사 실시 및 전 항목 적합 여부", is_editable=False)
                 mfg_data["[제조] (3) 구매관리_점검"] = render_upload_block("(3) 구매관리_점검 (배점 3점)", "mf23", "제출 서류: 협력업체 점검 기준서 또는 점검 기록 / 기준: 구매업체 점검 여부 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (4) 구매관리_입고"] = render_upload_block("(4) 구매관리_입고 (배점 3점)", "mf24", "제출 서류: 입고 검사 일지 / 기준: 입고 시 기준 부합 검사 여부", is_editable=False)
+                mfg_data["[제조] (4) 구매관리_입고"] = render_upload_block("(4) 구매관리_입고 (배점 3점)", "mf24", "제출 서류: 입고 검 일지 / 기준: 입고 시 기준 부합 검사 여부", is_editable=False)
                 mfg_data["[제조] (5) 구매관리_성적서"] = render_upload_block("(5) 구매관리_성적서 (배점 3점)", "mf25", "제출 서류: 원부재료 성적서 (GMO, 원산지 등) / 기준: 성적서 수취 여부", is_editable=False)
                 mfg_data["[제조] (6) 클레임/반품관리"] = render_upload_block("(6) 클레임/반품관리 (배점 3점)", "mf26", "제출 서류: 클레임 관리 기준서 또는 처리 내역 / 기준: 클레임 관리 여부 (1개만 있어도 만점)", is_editable=False)
 
@@ -1413,7 +1412,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
             with tab_mail1:
                 st.markdown("### 정기 심사 일괄 안내 메일 발송")
-                st.caption("[안내] 2026년 기준 '거래중', '신규'로 등록된 190개 업체의 이메일이 자동으로 세팅되어 있습니다. 수신자 목록은 직접 수정하실 수 있습니다.")
+                st.caption("[안내] 2026년 기준 '거래중', '신규'로 등록된 189개 업체의 이메일이 자동으로 세팅되어 있습니다. 수신자 목록은 직접 수정하실 수 있습니다.")
                 
                 target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=DEFAULT_BULK_EMAILS_CLEANED, height=100)
                 
@@ -1542,7 +1541,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
             with tab_mail3:
                 st.markdown("### 미제출 업체 리마인드 메일 발송")
-                st.caption("[안내] 심사 대상 190개 업체 중, 현재까지 시스템을 통해 **서류를 제출하지 않은 대기 업체**만 시스템이 자동으로 추려 이메일을 세팅합니다.")
+                st.caption("[안내] 심사 대상 189개 업체 중, 현재까지 시스템을 통해 **서류를 제출하지 않은 대기 업체**만 시스템이 자동으로 추려 이메일을 세팅합니다.")
                 
                 submitted_set = set(log_df['업체명'].dropna().unique()) if not log_df.empty else set()
                 pending_companies = [c for c in TARGET_COMPANIES if c != "선택하세요" and c not in submitted_set]
