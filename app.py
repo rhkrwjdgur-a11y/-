@@ -397,7 +397,8 @@ def send_email(to_email, subject, body, attachment_file=None):
         if attachment_file is not None:
             attachment_file.seek(0)
             part = MIMEApplication(attachment_file.read(), Name=attachment_file.name)
-            part['Content-Disposition'] = f'attachment; filename="{attachment_file.name}"'
+            # 한글 첨부파일명 깨짐(unknown) 방지 처리
+            part.add_header('Content-Disposition', 'attachment', filename=attachment_file.name)
             msg.attach(part)
         
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -658,7 +659,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     
                 if t1 or t3:
                     mfg_data["[제조] (1) 공정관리"] = render_upload_block("(1) 공정관리 (배점 8점)", "mf21", "제출 서류: 각 공정별 CCP 일지 / 기준: 한계기준 100% 충족 및 누락 없을 것", is_editable=False)
-                mfg_data["[제조] (2) 완제품관리"] = render_upload_block("(2) 완제품관리 (배점 3점)", "mf22", "제출 서류: 완제품 검 일지 / 기준: 규격 검사 실시 및 전 항목 적합 여부", is_editable=False)
+                mfg_data["[제조] (2) 완제품관리"] = render_upload_block("(2) 완제품관리 (배점 3점)", "mf22", "제출 서류: 완제품 검사 일지 / 기준: 규격 검사 실시 및 전 항목 적합 여부", is_editable=False)
                 mfg_data["[제조] (3) 구매관리_점검"] = render_upload_block("(3) 구매관리_점검 (배점 3점)", "mf23", "제출 서류: 협력업체 점검 기준서 또는 점검 기록 / 기준: 구매업체 점검 여부 (1개만 있어도 만점)", is_editable=False)
                 mfg_data["[제조] (4) 구매관리_입고"] = render_upload_block("(4) 구매관리_입고 (배점 3점)", "mf24", "제출 서류: 입고 검사 일지 / 기준: 입고 시 기준 부합 검사 여부", is_editable=False)
                 mfg_data["[제조] (5) 구매관리_성적서"] = render_upload_block("(5) 구매관리_성적서 (배점 3점)", "mf25", "제출 서류: 원부재료 성적서 (GMO, 원산지 등) / 기준: 성적서 수취 여부", is_editable=False)
