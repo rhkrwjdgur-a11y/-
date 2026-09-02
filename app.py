@@ -453,19 +453,15 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
                 [시스템 제출 규정 및 가이드라인]
                 1. 거래 형태별 작성 대상:
-                   - 원재료(제조) / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 전체 작성 대상이며, [검사내용시트] 작성 대상입니다(성적서 수치 대조).
-                   - 부자재(제조) / 세제류 외(제조): [개별시트] 불필요 항목이 자동 제외된 폼만 작성하며, [검사내용시트] 작성은 규정에 따라 면제됩니다.
-                   - 수입판매: [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다(COA 통관 기준).
-                   - 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상이며, [검사내용시트] 작성 대상입니다.
+                   - 원재료(제조) / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 전체 작성 대상입니다.
+                   - 부자재(제조) / 세제류 외(제조): [개별시트] 불필요 항목이 자동 제외된 폼만 작성합니다.
+                   - 수입판매: [개별시트] 유통/수입 평가항목 작성 대상입니다.
+                   - 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상입니다.
                 2. 증빙 자료 업로드 원칙:
                    - 항목별로 1개 이상의 필수 파일을 업로드해야 합니다. 다중 파일 업로드가 가능합니다.
-                   - '1개만 있어도 만점'이라고 명시된 항목은 여러 서류 중 하나만 제출해도 인정됩니다.
                    - 해당사항이 없는 경우 '해당사항 없음(N/A)'을 체크하고 반드시 타당한 사유를 텍스트로 입력해야 합니다. 사유가 부실하면 관리자 검토 시 반려 처리됩니다.
-                3. 검사내용 시트 작성법:
-                   - 업로드할 '자가/공인 검사 성적서' 또는 '수입 COA' 원본을 보고, 주요 검사항목, 법적/통관 기준, 실제 검사 결과값을 표에 직접 입력해야 합니다.
-                   - 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
-                4. 시스템 이용 순서:
-                   - [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후, 맨 아래 '모든 시트 작성 완료 및 최종 일괄 제출' 버튼을 클릭해야 완료됩니다.
+                3. 시스템 이용 순서:
+                   - [공통 시트] -> [개별 시트] 순서대로 입력 후, 맨 아래 '모든 시트 작성 완료 및 최종 일괄 제출' 버튼을 클릭해야 완료됩니다.
 
                 [기본 연락처 및 문의 안내 지침]
                 - 담당자: 식품안전팀 곽정혁
@@ -491,9 +487,9 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
     st.title("협력업체 서류 심사 일괄 제출 시스템")
     
     st.error("[절대 주의] 작성 도중 브라우저 '뒤로 가기' 및 '새로고침(F5)'을 누르시면 첨부하신 모든 파일과 내용이 즉시 초기화됩니다.")
-    st.info("[안내] 작성 방법: [공통 시트] -> [개별 시트] -> [검사내용 시트] 순서대로 입력 후 맨 아래 [최종 일괄 제출] 버튼을 누르십시오.")
+    st.info("[안내] 작성 방법: [공통 시트] -> [개별 시트] 순서대로 입력 후 맨 아래 [최종 일괄 제출] 버튼을 누르십시오.")
 
-    tab1, tab2, tab3 = st.tabs(["공통 시트", "개별 시트", "검사내용 시트"])
+    tab1, tab2 = st.tabs(["공통 시트", "개별 시트"])
 
     # ----------------------------------------
     # 탭 1: 공통 시트
@@ -524,18 +520,17 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
 
         is_mfg = t1 or t2 or t3 or t4
         is_dist = t5 or t6
-        requires_inspection_sheet = t1 or t3 or t5 or t6
 
         if is_mfg or is_dist:
             guide_texts = []
             if t1 or t3:
-                guide_texts.append("- 원재료 / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 작성 대상 / [검사내용시트] 작성 대상 (성적서 대조)")
+                guide_texts.append("- 원재료 / OEM: [개별시트] 서류, 환경, 공정 등 제조 평가항목 작성 대상")
             if t2 or t4:
-                guide_texts.append("- 부자재 / 세제류 외: [개별시트] 불필요 항목이 자동 제외된 전용 폼 노출 / [검사내용시트] 규정에 따라 작성 면제")
+                guide_texts.append("- 부자재 / 세제류 외: [개별시트] 불필요 항목이 자동 제외된 전용 폼 노출")
             if t5:
-                guide_texts.append("- 수입판매: [개별시트] 유통/수입 평가항목 작성 대상 / [검사내용시트] 작성 대상 (COA 통관 기준)")
+                guide_texts.append("- 수입판매: [개별시트] 유통/수입 평가항목 작성 대상")
             if t6:
-                guide_texts.append("- 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상 / [검사내용시트] 작성 대상 (성적서 대조)")
+                guide_texts.append("- 국내유통(미제조): [개별시트] 유통/수입 평가항목 작성 대상")
             
             st.info("[안내] 선택하신 거래 형태별 제출 안내\n\n" + "\n".join(guide_texts))
 
@@ -605,15 +600,15 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 else:
                     st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
-                mfg_data["[제조] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "mf1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)", is_editable=False)
+                mfg_data["[제조] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "mf1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인", is_editable=False)
                 mfg_data["[제조] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 3점)", "mf2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 사항 일치 및 유효기간 만료 여부", is_editable=False)
                 if t1 or t3:
                     mfg_data["[제조] (3) 품목제조보고"] = render_upload_block("(3) 품목제조보고 (배점 5점)", "mf3", "제출 서류: 품목제조보고서 / 기준: 제품명, 원료, 유통기한 일치 여부", is_editable=False)
-                mfg_data["[제조] (4) 원료수불부"] = render_upload_block("(4) 원료수불부 (배점 5점)", "mf4", "제출 서류: 원료수불부 / 기준: 매일 작성 및 누락 여부 확인", is_editable=False)
-                mfg_data["[제조] (5) 자가품질검사"] = render_upload_block("(5) 자가품질검사 (배점 5점)", "mf5", "제출 서류: 자가/공인 검사 성적서 / 기준: 전 항목 적합 판정 여부", is_editable=False)
+                mfg_data["[제조] (4) 원료수불부"] = render_upload_block("(4) 원료수불부 (배점 5점)", "mf4", "제출 서류: 원료수불부 / 기준: 최근(1달이내) 원료 수불부 제출", is_editable=False)
+                mfg_data["[제조] (5) 자가품질검사"] = render_upload_block("(5) 자가품질검사 (배점 5점)", "mf5", "제출 서류: 자가/공인 검사 성적서 / 기준: 주기적으로 실시 여부 확인(가장 최근 자가품질성적서 제출)", is_editable=False)
                 mfg_data["[제조] (6) 건강진단"] = render_upload_block("(6) 건강진단 (배점 5점)", "mf6", "제출 서류: 보건증 / 기준: 1년 1개월 이내 검증 및 유효기간 확인", is_editable=False)
                 mfg_data["[제조] (7) 위생교육"] = render_upload_block("(7) 위생교육 (배점 5점)", "mf7", "제출 서류: 법정 위생교육 수료증 / 기준: 해당 제조업에 맞는 교육 이수 여부", is_editable=False)
-                mfg_data["[제조] (8) 수질검사"] = render_upload_block("(8) 수질검사 (배점 5점)", "mf8", "제출 서류: 상수도 성적서 또는 지하수 성적서 / 기준: 지하수 반년 이내 검사 확인 (1개만 있어도 만점)", is_editable=False)
+                mfg_data["[제조] (8) 수질검사"] = render_upload_block("(8) 수질검사 (배점 5점)", "mf8", "제출 서류: 상수도 성적서 또는 지하수 성적서 / 기준: 운영하는 용수 최신 성적서 제출(지하수 반년 이내 검사 확인)", is_editable=False)
 
             exp2_prefixes = ["mf9", "mf10", "mf11", "mf12", "mf13", "mf14", "mf15", "mf16", "mf17", "mf18"]
             exp2_completed = get_completed_count(exp2_prefixes)
@@ -625,15 +620,15 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
                 mfg_data["[제조] (1) 구분구획"] = render_upload_block("(1) 구분구획 (배점 3점)", "mf9", "제출 서류: 작업장 평면도 또는 설비 배치도 / 기준: 구획/구분 표시 여부 확인", is_editable=False)
-                mfg_data["[제조] (2) 환기/청정도"] = render_upload_block("(2) 환기/청정도 (배점 3점)", "mf10", "제출 서류: 낙하세균 검사 일지 등 / 기준: 낙하세균 검사 관리 여부", is_editable=False)
-                mfg_data["[제조] (3) 조명관리"] = render_upload_block("(3) 조명관리 (배점 3점)", "mf11", "제출 서류: 조도검사 관리 일지 / 기준: 조도 관리 여부 확인", is_editable=False)
+                mfg_data["[제조] (2) 환기/청정도"] = render_upload_block("(2) 환기/청정도 (배점 3점)", "mf10", "제출 서류: 낙하세균 검사 일지 등 / 기준: 최근 낙하세균 성적서 제출", is_editable=False)
+                mfg_data["[제조] (3) 조명관리"] = render_upload_block("(3) 조명관리 (배점 3점)", "mf11", "제출 서류: 조도검사 관리 일지 / 기준: 최근 조도관리 내역 제출", is_editable=False)
                 mfg_data["[제조] (4) 청결관리"] = render_upload_block("(4) 청결관리 (배점 3점)", "mf12", "제출 서류: 위생점검일지 또는 세척/소독 기준서 / 기준: 세척/소독 수립 및 실시 여부 (1개만 있어도 만점)", is_editable=False)
-                mfg_data["[제조] (5) CIP관리"] = render_upload_block("(5) CIP관리 (배점 3점)", "mf13", "제출 서류: CIP 일지 / 기준: CIP 관리 기록 확인", is_editable=False)
+                mfg_data["[제조] (5) CIP관리"] = render_upload_block("(5) CIP관리 (배점 3점)", "mf13", "제출 서류: CIP 일지 또는 CIP 기준서 / 기준: CIP 관리 기록 확인", is_editable=False)
                 mfg_data["[제조] (6) 설비_온도"] = render_upload_block("(6) 설비_온도 (배점 3점)", "mf14", "제출 서류: 냉장/냉동 온도 검사 일보 / 기준: 온도 한계기준 이탈 여부 확인", is_editable=False)
                 mfg_data["[제조] (7) 설비_검교정"] = render_upload_block("(7) 설비_검교정 (배점 3점)", "mf15", "제출 서류: 검교정 계획표 또는 검교정 일지 / 기준: 검교정 실시 여부 확인 (1개만 있어도 만점)", is_editable=False)
                 mfg_data["[제조] (8) 보관관리_MSDS"] = render_upload_block("(8) 보관관리_MSDS (배점 3점)", "mf16", "제출 서류: 화학제 MSDS 보관 사진 또는 문서 / 기준: 화학물질 관리 여부 확인", is_editable=False)
                 mfg_data["[제조] (9) 보관관리_기준서"] = render_upload_block("(9) 보관관리_기준서 (배점 3점)", "mf17", "제출 서류: 보관관리기준서 / 기준: 보관 기준 적합 여부 확인", is_editable=False)
-                mfg_data["[제조] (10) 저수시설"] = render_upload_block("(10) 저수시설 (배점 3점)", "mf18", "제출 서류: 저수조 청소 관련 서류 / 기준: 청소 실시 기록 확인", is_editable=False)
+                mfg_data["[제조] (10) 저수시설"] = render_upload_block("(10) 저수시설 (배점 3점)", "mf18", "제출 서류: 저수조 청소 관련 서류 / 기준: 법적기준 이내 저수조 청소 실시 여부", is_editable=False)
 
             exp3_prefixes = ["mf20"]
             exp3_completed = get_completed_count(exp3_prefixes)
@@ -644,7 +639,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 else:
                     st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
-                mfg_data["[제조] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 3점)", "mf20", "제출 서류: 방충방서 소독 일지 또는 보고서 / 기준: 매월 정기 소독 기록 여부", is_editable=False)
+                mfg_data["[제조] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 3점)", "mf20", "제출 서류: 방충방서 소독 일지 또는 보고서 / 기준: 정기적인 방충방서 관리 여부", is_editable=False)
 
             exp4_prefixes = ["mf22", "mf23", "mf24", "mf25", "mf26"]
             if t1 or t3:
@@ -694,13 +689,13 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 else:
                     st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
-                dist_data["[유통] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "df1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인 (1개만 있어도 만점)", is_editable=False)
+                dist_data["[유통] (1) 영업신고"] = render_upload_block("(1) 영업신고 (배점 5점)", "df1", "제출 서류: 영업허가증(신고증) 또는 사업자등록증 / 기준: 서류 제출 유무 확인", is_editable=False)
                 dist_data["[유통] (2) 인증서"] = render_upload_block("(2) 인증서 (배점 5점)", "df2", "제출 서류: HACCP, FSSC22000 등 인증서 / 기준: 인증 유효기간 만료 여부 확인", is_editable=False)
                 if t6:
                     dist_data["[유통] (3) 품목제조보고(국내)"] = render_upload_block("(3) 품목제조보고(국내) (배점 5점)", "df3", "제출 서류: 품목제조보고서 / 기준: 제품명, 유통기한 일치 여부", is_editable=False)
                 if t5:
                     dist_data["[유통] (4) 수입 관련 서류"] = render_upload_block("(4) 수입 관련 서류 (배점 10점)", "df4", "제출 서류: 수입신고필증 또는 수입신고확인증 / 기준: 통관 내역 적합 여부 (1개만 있어도 만점)", is_editable=False)
-                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서 / 기준: 전 항목 적합 여부", is_editable=False)
+                dist_data["[유통] (5) 자가품질검사(국내)"] = render_upload_block("(5) 자가품질검사(국내) (배점 5점)", "df5", "제출 서류: 제품 성적서/COA / 기준: 전 항목 적합 여부", is_editable=False)
 
             exp_dist2_prefixes = ["df6", "df7", "df8", "df9", "df10"]
             exp_dist2_completed = get_completed_count(exp_dist2_prefixes)
@@ -726,7 +721,7 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 else:
                     st.success("[성공] 본 카테고리의 모든 필수 서류 제출이 완료되었습니다.")
                     
-                dist_data["[유통] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 5점)", "df12", "제출 서류: 방충방서 소독 보고서 / 기준: 정기 소독 관리 여부", is_editable=False)
+                dist_data["[유통] (1) 작업장 소독/점검"] = render_upload_block("(1) 작업장 소독/점검 (배점 5점)", "df12", "제출 서류: 방충방서 소독 보고서 / 기준: 정기적인 방충방서 관리 여부", is_editable=False)
 
             exp_dist4_prefixes = ["df13", "df14", "df15"]
             exp_dist4_completed = get_completed_count(exp_dist4_prefixes)
@@ -740,82 +735,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                 dist_data["[유통] (1) 출고관리"] = render_upload_block("(1) 출고관리 (배점 10점)", "df13", "제출 서류: 수불관리 이력 (출고관리일지 등) / 기준: 유통기한 또는 Lot별 관리 여부", is_editable=False)
                 dist_data["[유통] (2) 구매 업체 관리"] = render_upload_block("(2) 구매 업체 관리 (배점 5점)", "df14", "제출 서류: 구매관리기준서, 협력업체 관리 기준, 점검 내역 중 1 / 기준: 협력사 관리 여부 (1개만 있어도 만점)", is_editable=False)
                 dist_data["[유통] (3) 클레임/반품관리"] = render_upload_block("(3) 클레임/반품관리 (배점 10점)", "df15", "제출 서류: 클레임기준서 또는 클레임관리 내역 / 기준: 클레임 및 부적합 관리 여부 (1개만 있어도 만점)", is_editable=False)
-
-    # ----------------------------------------
-    # 탭 3: 검사내용 시트
-    # ----------------------------------------
-    mfg_df, dist_df = pd.DataFrame(), pd.DataFrame()
-    mfg_coa_files, dist_coa_files = [], []
-    mfg_coa_na, dist_coa_na = False, False
-    mfg_coa_na_reason, dist_coa_na_reason = "", ""
-    
-    with tab3:
-        if transaction_type == "선택하세요":
-            st.info("[안내] [공통 시트] 탭에서 거래 형태를 먼저 선택해 주십시오.")
-        elif not requires_inspection_sheet:
-            st.success("[안내] 귀하의 거래 형태(부자재 또는 세제류 외)는 매뉴얼 규정에 따라 [검사내용 시트] 작성이 면제됩니다. 하단의 최종 제출 버튼을 눌러주십시오.")
-        else:
-            if t1 or t3 or t6:
-                st.markdown("### [제조/국내유통] 법적 기준 입력 및 성적서 대조")
-                
-                st.info("""
-                [작성 가이드]
-                하단에 업로드하실 '자가/공인 검사 성적서' 원본을 기준으로, 핵심 검사항목과 법적 기준, 그리고 실제 검사 결과값을 표에 입력해 주십시오.
-                입력하신 데이터는 첨부된 성적서와 1:1로 정밀하게 AI 교차 검증됩니다.
-                
-                - 입력 안내: 모든 세부 항목을 적기 어렵다면, 핵심 항목(대장균군, 중금속 등) 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
-                - 행 추가 방법: 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 입력 칸이 계속 추가됩니다.
-                """)
-                
-                mfg_df = st.data_editor(
-                    pd.DataFrame([
-                        {"제품명": "[예시] 연세우유", "검사항목(예: 납)": "대장균군", "법적기준(예: 3.5이하)": "n=5, c=2, m=0, M=10", "자가검사수치": "적합(음성)"},
-                        {"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""},
-                        {"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""},
-                        {"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""},
-                        {"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""},
-                        {"제품명": "", "검사항목(예: 납)": "", "법적기준(예: 3.5이하)": "", "자가검사수치": ""}
-                    ]), 
-                    num_rows="dynamic", 
-                    use_container_width=True,
-                    key="mdf"
-                )
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                mfg_coa_na = st.checkbox("해당사항 없음 (N/A) - 검사성적서", key="mfg_coa_na")
-                if mfg_coa_na:
-                    mfg_coa_na_reason = st.text_input("검사성적서 해당사항 없음 사유:", key="mfg_coa_na_reason")
-                mfg_coa_files = st.file_uploader("위 표와 대조할 자가/공인 검사 성적서 원본 업로드 (다중 파일 가능)", key="mdf_file", accept_multiple_files=True, disabled=mfg_coa_na)
-
-            if t5:
-                st.markdown("### [수입판매] COA 통관 검사 기준 입력")
-                
-                st.info("""
-                [작성 가이드]
-                하단에 업로드하실 '수입 COA 성적서' 원본을 기준으로, 주요 검사항목과 통관 기준, 그리고 수입 시 실제 검사 결과값을 표에 입력해 주십시오.
-                - 입력 안내: 모든 세부 항목을 적기 어렵다면, 핵심 항목 위주로 최소 3~5가지만 정확히 기재하셔도 무방합니다.
-                - 행 추가 방법: 표 맨 아래의 빈 공간이나 '+' 영역을 클릭하시면 새로운 칸이 추가됩니다.
-                """)
-                
-                dist_df = st.data_editor(
-                    pd.DataFrame([
-                        {"제품명": "[예시] 멸균유", "COA검사항목": "세균수", "COA법적기준": "음성", "수입시검사수치": "음성"},
-                        {"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""},
-                        {"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""},
-                        {"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""},
-                        {"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""},
-                        {"제품명": "", "COA검사항목": "", "COA법적기준": "", "수입시검사수치": ""}
-                    ]), 
-                    num_rows="dynamic", 
-                    use_container_width=True,
-                    key="ddf"
-                )
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                dist_coa_na = st.checkbox("해당사항 없음 (N/A) - COA", key="dist_coa_na")
-                if dist_coa_na:
-                    dist_coa_na_reason = st.text_input("COA 해당사항 없음 사유:", key="dist_coa_na_reason")
-                dist_coa_files = st.file_uploader("위 표와 대조할 수입 COA 성적서 원본 업로드 (다중 파일 가능)", key="ddf_file", accept_multiple_files=True, disabled=dist_coa_na)
 
     # ==========================================
     # 최종 통합 제출 버튼 (2단계 검증 + 병렬 처리 속도 향상 + 단일 일괄 저장)
@@ -842,13 +761,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     elif not data["is_na"] and not data["files"]:
                         missing_alerts.append(f"{doc_key} (증빙 서류 미제출)")
             
-            if requires_inspection_sheet:
-                if t1 or t3 or t6:
-                    if mfg_coa_na and not mfg_coa_na_reason:
-                        missing_alerts.append("[제조] 검사성적서 (해당사항 없음 사유 미입력)")
-                    elif not mfg_coa_na and not mfg_coa_files:
-                        missing_alerts.append("[제조] 검사성적서 (증빙 서류 미제출)")
-            
             if is_dist:
                 for doc_key, data in dist_data.items():
                     if data["is_na"] and not data["na_reason"]:
@@ -856,11 +768,6 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                     elif not data["is_na"] and not data["files"]:
                         missing_alerts.append(f"{doc_key} (증빙 서류 미제출)")
                 
-                if dist_coa_na and not dist_coa_na_reason:
-                    missing_alerts.append("[수입] COA 성적서 (해당사항 없음 사유 미입력)")
-                elif not dist_coa_na and not dist_coa_files:
-                    missing_alerts.append("[수입] COA 성적서 (증빙 서류 미제출)")
-
             # 2단계: 누락 판별 및 강제 제출 분기 (명확한 UI)
             if missing_alerts and not st.session_state.force_submit_warned:
                 st.error("[제출 보류] 필수 서류가 누락되었습니다:\n\n- " + "\n- ".join(missing_alerts))
@@ -915,58 +822,10 @@ if menu == "업체 서류 일괄 제출 (AI 검증)":
                         for doc_key, data in mfg_data.items():
                             apply_submission(doc_key, data)
 
-                    if requires_inspection_sheet:
-                        if t1 or t3 or t6:
-                            if mfg_coa_na:
-                                if not mfg_coa_na_reason:
-                                    instant_logs.append({
-                                        "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
-                                        "judgment": "부적합 (사유누락)", "reason": "해당사항 없음(N/A) 사유 미입력으로 부적합 처리됨",
-                                        "admin_score": "부적합 (사유누락)", "file_links": "첨부파일 없음", "max_score": 0
-                                    })
-                                else:
-                                    instant_logs.append({
-                                        "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
-                                        "judgment": "적합 (NA예외)", "reason": f"해당사항 없음: {mfg_coa_na_reason}",
-                                        "admin_score": "적합 (NA예외)", "file_links": "첨부파일 없음", "max_score": 0
-                                    })
-                            elif not mfg_coa_files:
-                                instant_logs.append({
-                                    "doc_name": "[제조] 최종 검사성적서", "criteria": "성적서 대조",
-                                    "judgment": "부적합 (미첨부)", "reason": "자가검사성적서가 업로드되지 않아 부적합 처리됨",
-                                    "admin_score": "부적합 (미첨부)", "file_links": "첨부파일 없음", "max_score": 0
-                                })
-                            else:
-                                grid_data = mfg_df.to_dict('records')
-                                tasks.append({"doc_name": "[제조] 최종 검사성적서", "criteria": f"입력된 법적기준({grid_data})과 성적서 수치 일치/통과 여부 대조", "files": mfg_coa_files, "max_score": 0})
-
                     if is_dist:
                         for doc_key, data in dist_data.items():
                             apply_submission(doc_key, data)
                             
-                        if dist_coa_na:
-                            if not dist_coa_na_reason:
-                                instant_logs.append({
-                                    "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
-                                    "judgment": "부적합 (사유누락)", "reason": "해당사항 없음(N/A) 사유 미입력으로 부적합 처리됨",
-                                    "admin_score": "부적합 (사유누락)", "file_links": "첨부파일 없음", "max_score": 0
-                                })
-                            else:
-                                instant_logs.append({
-                                    "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
-                                    "judgment": "적합 (NA예외)", "reason": f"해당사항 없음: {dist_coa_na_reason}",
-                                    "admin_score": "적합 (NA예외)", "file_links": "첨부파일 없음", "max_score": 0
-                                })
-                        elif not dist_coa_files:
-                            instant_logs.append({
-                                "doc_name": "[수입] COA 검사성적서", "criteria": "COA 성적서 대조",
-                                "judgment": "부적합 (미첨부)", "reason": "수입 COA 성적서가 업로드되지 않아 부적합 처리됨",
-                                "admin_score": "부적합 (미첨부)", "file_links": "첨부파일 없음", "max_score": 0
-                            })
-                        else:
-                            grid_data = dist_df.to_dict('records')
-                            tasks.append({"doc_name": "[수입] COA 검사성적서", "criteria": f"입력된 COA기준({grid_data})과 성적서 수치 대조", "files": dist_coa_files, "max_score": 0})
-
                     if not tasks and not instant_logs:
                         st.warning("[주의] 제출할 항목이 구성되지 않았습니다. 거래 형태를 다시 확인해 주십시오.")
                     else:
