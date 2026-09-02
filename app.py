@@ -331,9 +331,17 @@ def get_completed_count(prefixes):
 
 def is_deducted(row):
     score_str = str(row.get('관리자최종점수', '0점'))
-    if "해당사항 없음" in score_str or "NA예외" in score_str or "사유누락" in score_str or "심사 제외" in score_str: return False
-    if "만점" in score_str or "통과" in score_str or "적합" in score_str: return False
+    
+    # 확실한 부적합/미비 사유인 경우 무조건 True (차감됨)
+    if "부적합" in score_str or "미첨부" in score_str or "사유누락" in score_str:
+        return True
+        
+    # 제외되거나, 만점/적합으로 처리된 경우는 False
+    if "심사 제외" in score_str: return False
     if "최종확정" in score_str: return False
+    if "만점" in score_str: return False
+    if "적합" in score_str and "부적합" not in score_str: return False
+    if "해당사항 없음" in score_str or "NA예외" in score_str or "사유 타당함" in score_str: return False
     
     doc_name = str(row.get('심사항목', ''))
     max_score = DOC_MAX_SCORES.get(doc_name, 0)
@@ -341,18 +349,27 @@ def is_deducted(row):
     if max_score > 0:
         match = re.search(r'(\d+)점', score_str)
         earned = int(match.group(1)) if match else 0
-        if earned >= max_score: return False
-    return True
+        if earned < max_score: 
+            return True # 만점보다 낮으면 차감됨
+        else:
+            return False
+            
+    return True # 기본 안전장치
 
 def is_passed(row):
     score_str = str(row.get('관리자최종점수', '0점'))
-    if "해당사항 없음" in score_str or "NA예외" in score_str or "심사 제외" in score_str: return False
+    
+    if "부적합" in score_str or "미첨부" in score_str or "사유누락" in score_str:
+        return False
+        
+    if "심사 제외" in score_str: return False
     if "최종확정" in score_str: return True
+    if "해당사항 없음" in score_str or "NA예외" in score_str or "사유 타당함" in score_str: return True
         
     doc_name = str(row.get('심사항목', ''))
     max_score = DOC_MAX_SCORES.get(doc_name, 0)
     
-    if "만점" in score_str or "통과" in score_str or "적합" in score_str:
+    if "만점" in score_str or "통과" in score_str or ("적합" in score_str and "부적합" not in score_str):
         return True
         
     if max_score > 0:
@@ -1431,7 +1448,21 @@ elif menu == "관리자 업체관리 (메일 발송)":
                             for idx, row in comp_zero_df.iterrows():
                                 missing_items_text += f"- {row['심사항목']}\n  (반려 사유: {row['AI상세사유']})\n\n"
                             
-                            default_req_body = f"안녕하십니까,\n연세유업 아산공장 식품안전팀 곽정혁입니다.\n\n2026년도 협력업체 서류 심사 결과, 제출해 주신 서류 중 일부 미비 사항이 확인되어 보완을 요청해 드립니다.\n아래 내용을 확인하시어 누락 및 오제출된 서류를 본 메일(rhkrwjdgur@yonseidairy.com)로 회신하여 주시기 바랍니다.\n\n[미비 항목 및 보완 요청 사유]\n{missing_items_text}\n기한 내에 서류가 보완될 수 있도록 협조 부탁드립니다.\n감사합니다."
+                            default_req_body = f"""안녕하십니까,
+연세유업 아산공장 품질안전부문 식품안전팀 곽정혁입니다.
+
+2026년도 협력업체 서류 심사 결과, 귀사의 제출 내역 중 일부 미비 사항(서류 미첨부, 또는 '해당사항 없음' 선택 후 사유 누락 등)이 확인되어 보완을 요청해 드립니다.
+아래 미비 항목을 확인하시어 기한 내에 추가 조치를 부탁드립니다.
+
+[미비 항목 및 보완 요청 사유]
+{missing_items_text}
+[보완 조치 방법 (아래 3가지 중 택 1)]
+1. 본 메일(rhkrwjdgur@yonseidairy.com)로 누락된 증빙 서류를 첨부하여 직접 회신
+2. 해당 서류가 귀사의 거래 형태상 불필요한 경우, 본 메일 회신으로 명확한 '해당사항 없음 사유'를 작성하여 회신 (예: 설립 3년 미만으로 재무제표 발급 불가 등)
+3. 시스템( https://9yhkkjjyezju9w5bxsdhxd.streamlit.app/ )에 재접속하여 누락된 서류만 추가 업로드 후 재제출
+
+기한 내에 서류 또는 사유가 보완될 수 있도록 적극적인 협조 부탁드립니다.
+감사합니다."""
                             
                             mail_body_req = st.text_area("메일 내용 (보완 요청):", value=default_req_body, height=300)
 
