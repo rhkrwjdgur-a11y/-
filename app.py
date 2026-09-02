@@ -74,7 +74,7 @@ TARGET_COMPANIES = [
     "알프스", "(주)청우라이프사이언스", "㈜빅솔", "티지에프"
 ]
 
-# 2026년 기준 189개 업체 1:1 매칭용 딕셔너리 (대상다이브스 추가, OKF 삭제 완료)
+# 2026년 기준 189개 업체 1:1 매칭용 딕셔너리
 COMPANY_EMAIL_DICT = {
     "테트라팩(유)": "kevin.kil@tetrapak.com", "SIG Combibloc(인천세관장)": "harris.kim@sig.biz",
     "에스아이지패키징코리아": "youngsam.moon@sig.biz", "㈜한국팩키지": "eshwang@hkpak.co.kr",
@@ -990,20 +990,34 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 if not filtered_df.empty:
                     filtered_df = filtered_df.sort_values(time_col, ascending=False).drop_duplicates(subset=['업체명', '심사항목'], keep='first')
 
-                st.markdown("### 1. 심사 서류 제출 현황 파악")
+                # 전체 대상 업체 및 상태 분류
                 all_targets = [c for c in TARGET_COMPANIES if c != "선택하세요"]
-                submitted_set = set(filtered_df['업체명'].dropna().unique())
                 
-                submitted_list = [c for c in all_targets if c in submitted_set]
-                pending_list = [c for c in all_targets if c not in submitted_set]
+                exempt_set = set()
+                submitted_set = set()
                 
-                col_a, col_b, col_c, col_d = st.columns(4)
-                progress_rate = int((len(submitted_list) / len(all_targets)) * 100) if len(all_targets) > 0 else 0
+                for company in filtered_df['업체명'].dropna().unique():
+                    comp_df = filtered_df[filtered_df['업체명'] == company]
+                    if any("6개월 무거래" in str(x) for x in comp_df['관리자최종점수']):
+                        exempt_set.add(company)
+                    else:
+                        submitted_set.add(company)
+
+                # 실제 미제출 대기 업체 = 전체 - 제출완료 - 심사제외
+                pending_list = [c for c in all_targets if c not in submitted_set and c not in exempt_set]
                 
-                col_a.metric("전체 심사 대상 업체", f"{len(all_targets)}개")
-                col_b.metric("제출 완료 업체", f"{len(submitted_list)}개")
-                col_c.metric("미제출 대기 업체", f"{len(pending_list)}개")
-                col_d.metric("제출 진행률", f"{progress_rate}%")
+                st.markdown("### 1. 심사 서류 제출 현황 파악")
+                col_a, col_b, col_c, col_d, col_e = st.columns(5)
+                
+                # 진행률은 전체에서 제출완료+심사제외가 차지하는 비율로 계산
+                completed_count = len(submitted_set) + len(exempt_set)
+                progress_rate = int((completed_count / len(all_targets)) * 100) if len(all_targets) > 0 else 0
+                
+                col_a.metric("전체 대상 업체", f"{len(all_targets)}개")
+                col_b.metric("제출 완료 업체", f"{len(submitted_set)}개")
+                col_c.metric("심사 제외 (6개월 무거래)", f"{len(exempt_set)}개")
+                col_d.metric("미제출 대기 업체", f"{len(pending_list)}개")
+                col_e.metric("진행률", f"{progress_rate}%")
                 
                 st.progress(progress_rate / 100)
                 
@@ -1011,9 +1025,9 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 with col_s1:
                     with st.expander("제출 완료 업체 세부 목록", expanded=True):
                         with st.container(height=200):
-                            if not submitted_list:
+                            if not submitted_set:
                                 st.write("해당 없음")
-                            for comp in submitted_list:
+                            for comp in sorted(list(submitted_set)):
                                 st.write(comp)
                 with col_s2:
                     with st.expander("미제출 대기 업체 세부 목록", expanded=True):
@@ -1238,22 +1252,32 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
 
                     st.markdown("---")
                     
-                    if selected_info_company != "전체 보기":
-                        st.markdown("### 8. [예외 처리] 6개월 무거래 업체 지정")
-                        st.caption("최근 6개월 내 거래 실적이 없어 이번 심사 대상에서 제외할 경우 아래 버튼을 누르십시오. 제출한 전체 서류가 일괄 심사 제외 처리됩니다.")
-                        if st.button(f"[{selected_info_company}] 6개월 무거래로 심사 일괄 제외 처리", type="secondary"):
-                            with st.spinner("예외 처리 중입니다..."):
-                                for idx, row in comp_df.iterrows():
-                                    uid = row['고유ID']
-                                    if "6개월 무거래" not in str(row['관리자최종점수']):
-                                        update_google_sheet_admin_score(uid, "심사 제외 (6개월 무거래)")
-                            st.success(f"[{selected_info_company}] 업체가 '심사 제외'로 정상 처리되었습니다.")
-                            st.rerun()
+                    st.markdown("### 8. 미제출 업체 심사 제외 (6개월 무거래) 처리")
+                    st.caption("시스템에 한 번도 제출하지 않은 '미제출 대기 업체'를 선택하여 6개월 무거래 사유로 심사 대상에서 일괄 제외 처리합니다.")
+                    
+                    if pending_list:
+                        exempt_target = st.selectbox("심사 제외 처리할 미제출 업체를 선택하십시오:", ["선택하세요"] + sorted(pending_list))
+                        if exempt_target != "선택하세요":
+                            if st.button(f"[{exempt_target}] 6개월 무거래로 심사 일괄 제외 처리", type="secondary"):
+                                with st.spinner("예외 처리 중입니다..."):
+                                    current_time_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                                    formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    uid = f"{exempt_target}_예외처리_{current_time_str}"
+                                    row_data = [uid, formatted_time, exempt_target, "심사 예외", "-", "심사 제외", "-", "심사 제외 (6개월 무거래)", "-", "-", "-", "-", "-", "-", "-"]
+                                    if append_to_google_sheet(row_data):
+                                        st.success(f"[{exempt_target}] 업체가 '심사 제외 (6개월 무거래)' 상태로 정상 반영되었습니다.")
+                                        st.rerun()
+                                    else:
+                                        st.error("처리 중 데이터베이스 오류가 발생했습니다.")
+                    else:
+                        st.info("현재 미제출 대기 중인 업체가 없습니다.")
                             
-                        st.markdown("---")
+                    st.markdown("---")
+                    
+                    if selected_info_company != "전체 보기":
                         st.markdown(f"### 9. [{selected_info_company}] 전체 심사 이력")
                     else:
-                        st.markdown("### 8. 실시간 전체 심사 이력 (필터링됨)")
+                        st.markdown("### 9. 실시간 전체 심사 이력 (필터링됨)")
                         
                     st.dataframe(
                         display_df, 
@@ -1431,7 +1455,15 @@ elif menu == "관리자 업체관리 (메일 발송)":
                 st.caption("[안내] 심사 대상 189개 업체 중, 현재까지 시스템을 통해 **서류를 제출하지 않은 대기 업체**만 시스템이 자동으로 추려 이메일을 세팅합니다.")
                 
                 submitted_set = set(log_df['업체명'].dropna().unique()) if not log_df.empty else set()
-                pending_companies = [c for c in TARGET_COMPANIES if c != "선택하세요" and c not in submitted_set]
+                
+                # 심사 제외된 업체들도 미제출 대기 업체(리마인드 대상)에서 제외
+                exempt_companies_set = set()
+                for company in log_df['업체명'].dropna().unique():
+                    comp_df = log_df[log_df['업체명'] == company]
+                    if any("6개월 무거래" in str(x) for x in comp_df['관리자최종점수']):
+                        exempt_companies_set.add(company)
+                        
+                pending_companies = [c for c in TARGET_COMPANIES if c != "선택하세요" and c not in submitted_set and c not in exempt_companies_set]
                 
                 st.info(f"**현재 미제출 업체 수:** {len(pending_companies)}개")
                 
