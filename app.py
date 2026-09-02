@@ -176,7 +176,7 @@ COMPANY_EMAIL_DICT = {
 }
 COMPANY_EMAIL_DICT["담당자"] = "rhkrwjdgur@yonseidairy.com"
 
-# 에러 없는 클리닝된 190개 이메일 세팅 (제이앤이, 대상다이브스, 선그린/해찬솔 복수 이메일 포함 / 신성이노텍 제외 / 담당자 포함)
+# 에러 없는 클리닝된 190개 이메일 세팅
 DEFAULT_BULK_EMAILS_CLEANED = 'kevin.kil@tetrapak.com, harris.kim@sig.biz, youngsam.moon@sig.biz, eshwang@hkpak.co.kr, gq555@naver.com, sapp912@srpack.com, seoil@si-straw.com, sam5501@hanmail.net, 0148ks@hanmail.net, mjcartonbox@nate.com, tg_kim@dukwontop.com0, terious1234@naver.com, bjmin65@naver.com, sinwon111@hanmail.net, my8490@hspd.co.kr, shimmanikr@dongwon.com, lsy@epmi.co.kr, dlqmdl77@naver.com, sales.h@finewt.com, qwemhs@srtechno.co.kr, jaeho@gomun.co.kr, cooliris01@naver.com, amx2006amx@seoulfnb.co.kr, thyun@foodcore.kr, dymin1117@chamjoeunsf.co.kr, einsfood@daum.net, dsc0620@namyangi.com, dhshin@vilac.co.kr, dltmddyd84@cnspharm.com, hqct@hdiepoca.com, young-155@daum.net, woong5156@dairyzen.co.kr, egreen11@eastgreen.co.kr, cpuya2002@hanmail.net, kyj8810@jnekorea.com, wjdgus8771@purmil.co.kr, mongtiz87@choheung.co.kr, y7777@sunrich.co.kr, yonggi@goodmilk.co.kr, okm1212@kkmh.co.kr, jej0218@ys79.com, ksenc21@ksenc.co.kr, ahs@sscc.kr, hyowon.lee@ecolab.com, hckeum@nkcc.co.kr, korape@daum.net, Tae-hun.HA@agrana.com, jungwhan.kim@sajo.co.kr, jy.13.park@gmail.com, kmsong4@lotte.net, buldoglee0@naver.com, csfkmg@csfood.com, naraee@naraee.com, sgbok@ise.co.kr, parkkp00@gmail.com, jun@dsbiz.co.kr, rktnr@jsfm.co.kr, jupitercs@jupiterintl.co.kr, sunny@tofkorea.com, jhcho@bkbio.com, main@jknutra.com, djzymes@naver.com, may7988@hanmail.net, sungwon4871@hanmail.net, sungreen@foodtrading.co.kr, sales@foodtrading.co.kr, aroma600@hanmail.net, ml.corp@milips.co.kr, lim1214@naver.com, kimhc1958@naver.com, ec1718@hanmail.net, nuri@nurifs.com, qkfkadmirna@naturalway.co.kr, khsshk89@umac.co.kr, ollie-boy@ki-moon.com, hcsfood@naver.com, kimkhj123@naver.com, c3122246@naver.com, jsshin@snet7.com, sunep@heechang.co.kr, ahnsfs0@naver.com, wjs13@freshico.co.kr, dongeun@defc.co.kr, mtkim9702@naver.com, robin.lee@brenntag-asia.com, jyjang@nutrex.co.kr, sesarr@samikdairy.com, haeom222@nate.com, aroma@jffaroma.com, yrlee@nocks.co.kr, jcw-kr@samjungflavor.co.kr, hglee@namyung.com, chulminkim@songeun.com, brian.na@vixxol.com, hunatech@hunatech.co.kr, ytw8484@naver.com, ycfinc@naver.com, kskim@seoulfnf.com, dfi899@hanmail.net, tnpjip@naver.com, jhoh2010@bereum.com, jw.lim@chohyang.co.kr, dmshin@matsutani.co.kr, sales@samhwafnf.co.kr, finekorea@finekorea.biz, mkkim@sungonefi.co.kr, jspark@hyangrim.co.kr, jslee@samjungflavor.co.kr, jigumsales@gmail.com, soondol2@hffaroma.com, saminkoreaco@gmail.com, kjh@fka.co.kr, verryfnb@gmail.com, wonacorp@gmail.com, csfjyy@csfood.com, kkj348@tricomkorea.com, ace@acefl.co.kr, dpark@jj-global.kr, hoon7500@bing.co.kr, wyshin@sbbiz.co.kr, hyfoodtech@naver.com, dksalt@dksalt.co.kr, jsmsales@jsmfood.com, sales@nbiotech.co.kr, mjoeon@cremar.co.kr, sbjeon@sungchun.co.kr, shinhan4199@naver.com, huo@geltech.co.kr, sales@sktkorea.com, naree8507@nate.com, bill@eibt.co.kr, queserz@food-green.co.kr, ykyun0131@gmail.com, jthus@jthus.co.kr, cykim@bolak.co.kr, kk1004kk81@gmail.com, skc@jschemtron.com, fcaroma53@naver.com, smchoi@kwangil.co.kr, sales@kocara.com, chunsh@daepyung.co.kr, sungjicor@hanmail.net, yuilfi@naver.com, khchoi@samwootd.com, piona1990@daum.net, jkhwang@yonsei.ac.kr, jangjihwan@cosmaxnbt.com, pje@gauinter.com, okniceyou@korea.com, hisballad@nate.com, nw-official@naver.com, nnpfnb@gmail.com, knbiocare@gmail.com, palduk5@naver.com, daoom@daoominter.com, hbio@hbio21.com, hangaramgf@hangaramgf.com, hmkim@mnskorea.net, yesanjam@naver.com, uniontradingkr@gmail.com, yang_juyoung@daesang.com, yst054@naver.com, bill@richealth.co.kr, jc@parteckcorp.com, smss1444@naver.com, shtrad@hanmail.net, dhkim@incredouble.com, msjung@techneer.com, minsu.kim@bision.co.kr, gauree@gauree.net, nanana9988@hanmail.net, betheltrade@naver.com, dean.yang@Freemennutra.com, lena.heo@pmibiotech.com, darling-i@hanmail.net, asca3812@mirinter.co.kr, taesung@tae-sung.com, info@gyoto.com, gh37@gahyang.kr, sojungkim@holisticbio.com, syi0603@parmakorea.co.kr, swseo@inewtree.com, mayjs1@naver.com, js.choi@bohyang.com, jhs20900@hanmail.net, dkpark@alfskorea.com, hyunse7@chungwools.com, hymkim@vixxol.com, sosung@dearfood.co.kr, rhkrwjdgur@yonseidairy.com'
 
 DOC_MAX_SCORES = {
@@ -331,7 +331,7 @@ def get_completed_count(prefixes):
 
 def is_deducted(row):
     score_str = str(row.get('관리자최종점수', '0점'))
-    if "해당사항 없음" in score_str or "NA예외" in score_str or "사유누락" in score_str: return False
+    if "해당사항 없음" in score_str or "NA예외" in score_str or "사유누락" in score_str or "심사 제외" in score_str: return False
     if "만점" in score_str or "통과" in score_str or "적합" in score_str: return False
     if "최종확정" in score_str: return False
     
@@ -346,7 +346,7 @@ def is_deducted(row):
 
 def is_passed(row):
     score_str = str(row.get('관리자최종점수', '0점'))
-    if "해당사항 없음" in score_str or "NA예외" in score_str: return False
+    if "해당사항 없음" in score_str or "NA예외" in score_str or "심사 제외" in score_str: return False
     if "최종확정" in score_str: return True
         
     doc_name = str(row.get('심사항목', ''))
@@ -1035,11 +1035,16 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     company_scores = {}
                     for company in filtered_df['업체명'].unique():
                         comp_df = filtered_df[filtered_df['업체명'] == company]
-                        score = calculate_company_total_score(comp_df)
-
-                        if score >= 85: grade = "승 인"
-                        elif score >= 70: grade = "지 도"
-                        else: grade = "등급 외"
+                        
+                        is_exempt = any("6개월 무거래" in str(x) for x in comp_df['관리자최종점수'])
+                        if is_exempt:
+                            score = "-"
+                            grade = "심사 제외"
+                        else:
+                            score = calculate_company_total_score(comp_df)
+                            if score >= 85: grade = "승 인"
+                            elif score >= 70: grade = "지 도"
+                            else: grade = "등급 외"
 
                         biz_type_val = comp_df['영업의종류'].iloc[-1] if '영업의종류' in comp_df.columns else ""
                         item_val = comp_df['납품품목'].iloc[-1] if '납품품목' in comp_df.columns else ""
@@ -1051,14 +1056,16 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                             "item": item_val
                         }
 
-                    grade_counts = {"승 인": 0, "지 도": 0, "등급 외": 0}
+                    grade_counts = {"승 인": 0, "지 도": 0, "등급 외": 0, "심사 제외": 0}
                     for data in company_scores.values():
-                        grade_counts[data["grade"]] += 1
+                        if data["grade"] in grade_counts:
+                            grade_counts[data["grade"]] += 1
 
                     top_table_data = [
                         {"등 급": "승 인", "점 수": "85 ~ 100점", "업 체 수": grade_counts["승 인"], "조 치": "승 인"},
                         {"등 급": "지 도", "점 수": "70 ~ 84점", "업 체 수": grade_counts["지 도"], "조 치": "업체별 개선사항 피드백"},
                         {"등 급": "등급 외", "점 수": "70점미만, 미제출", "업 체 수": grade_counts["등급 외"], "조 치": "복수거래, 거래중지 등 검토"},
+                        {"등 급": "심사 제외", "점 수": "-", "업 체 수": grade_counts["심사 제외"], "조 치": "최근 6개월 무거래 업체"},
                         {"등 급": "합 계", "점 수": "", "업 체 수": sum(grade_counts.values()), "조 치": "-"}
                     ]
                     
@@ -1232,7 +1239,19 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                     st.markdown("---")
                     
                     if selected_info_company != "전체 보기":
-                        st.markdown(f"### 8. [{selected_info_company}] 전체 심사 이력")
+                        st.markdown("### 8. [예외 처리] 6개월 무거래 업체 지정")
+                        st.caption("최근 6개월 내 거래 실적이 없어 이번 심사 대상에서 제외할 경우 아래 버튼을 누르십시오. 제출한 전체 서류가 일괄 심사 제외 처리됩니다.")
+                        if st.button(f"[{selected_info_company}] 6개월 무거래로 심사 일괄 제외 처리", type="secondary"):
+                            with st.spinner("예외 처리 중입니다..."):
+                                for idx, row in comp_df.iterrows():
+                                    uid = row['고유ID']
+                                    if "6개월 무거래" not in str(row['관리자최종점수']):
+                                        update_google_sheet_admin_score(uid, "심사 제외 (6개월 무거래)")
+                            st.success(f"[{selected_info_company}] 업체가 '심사 제외'로 정상 처리되었습니다.")
+                            st.rerun()
+                            
+                        st.markdown("---")
+                        st.markdown(f"### 9. [{selected_info_company}] 전체 심사 이력")
                     else:
                         st.markdown("### 8. 실시간 전체 심사 이력 (필터링됨)")
                         
@@ -1336,6 +1355,12 @@ elif menu == "관리자 업체관리 (메일 발송)":
                     under_85_companies = []
                     for c in log_df['업체명'].dropna().unique():
                         comp_df = log_df[log_df['업체명'] == c]
+                        
+                        # 예외 처리된 업체 제외
+                        is_exempt = any("6개월 무거래" in str(x) for x in comp_df['관리자최종점수'])
+                        if is_exempt:
+                            continue
+                            
                         score = calculate_company_total_score(comp_df)
                         if score < 85:
                             under_85_companies.append(c)
