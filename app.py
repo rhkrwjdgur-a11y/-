@@ -74,110 +74,212 @@ TARGET_COMPANIES = [
     "알프스", "(주)청우라이프사이언스", "㈜빅솔", "티지에프"
 ]
 
-# 2026년 기준 189개 업체 1:1 매칭용 딕셔너리
+# 2026년 기준 189개 업체 다중 이메일 매칭용 딕셔너리 (최대 3개까지 반영)
 COMPANY_EMAIL_DICT = {
-    "테트라팩(유)": "kevin.kil@tetrapak.com", "SIG Combibloc(인천세관장)": "harris.kim@sig.biz",
-    "에스아이지패키징코리아": "youngsam.moon@sig.biz", "㈜한국팩키지": "eshwang@hkpak.co.kr",
-    "㈜케이아이비": "gq555@naver.com", "삼륭물산㈜": "sapp912@srpack.com",
-    "㈜서일": "seoil@si-straw.com", "삼성포장": "sam5501@hanmail.net",
-    "국일피앤피 주식회사": "0148ks@hanmail.net", "명진포장(주)": "mjcartonbox@nate.com",
-    "덕원기업": "tg_kim@dukwontop.com", "현대이피 주식회사": "terious1234@naver.com",
-    "호명화학공업㈜": "bjmin65@naver.com", "신성이노텍㈜ 음성공장": "shinsung@shinsung82.co.kr",
-    "주식회사신원통상": "sinwon111@hanmail.net", "신성이노텍㈜": "shinsung@shinsung82.co.kr",
-    "희성폴리머㈜": "my8490@hspd.co.kr", "동원시스템즈㈜": "shimmanikr@dongwon.com",
-    "㈜피엠아이": "lsy@epmi.co.kr", "㈜유래코": "dlqmdl77@naver.com",
-    "㈜엘컴화인": "sales.h@finewt.com", "에스알테크노팩㈜": "qwemhs@srtechno.co.kr",
-    "고문당인쇄㈜": "jaeho@gomun.co.kr", "삼육식품(천안)": "cooliris01@naver.com",
-    "(주)서울에프엔비": "amx2006amx@seoulfnb.co.kr", "(주)푸드코아": "thyun@foodcore.kr",
-    "(주)참조은에스에프": "dymin1117@chamjoeunsf.co.kr, joonk0328@chamjoeunsf.co.kr", "(주)아인츠푸드": "einsfood@daum.net",
-    "남양유업 경주공장_탈지,생크림": "dsc0620@namyangi.com", "비락_진천": "dhshin@vilac.co.kr",
-    "(주)한국씨엔에스팜": "dltmddyd84@cnspharm.com", "합동산업(주)": "hqct@hdiepoca.com",
-    "명가유업(주)_탈지.생크림": "young-155@daum.net", "㈜데어리젠": "woong5156@dairyzen.co.kr",
-    "동그린주식회사": "egreen11@eastgreen.co.kr", "유라가": "cpuya2002@hanmail.net",
-    "(주)제이앤이 아산공장": "kyj8810@jnekorea.com", "푸르밀": "wjdgus8771@purmil.co.kr",
-    "(주)조흥": "mongtiz87@choheung.co.kr", "㈜에스알인터내셔널": "y7777@sunrich.co.kr",
-    "범산목장": "yonggi@goodmilk.co.kr", "건국유업_상품": "okm1212@kkmh.co.kr",
-    "유성씨앤에프(주)": "jej0218@ys79.com", "금성이엔씨㈜": "ksenc21@ksenc.co.kr",
-    "새한실리켐㈜": "ahs@sscc.kr", "한국이콜랩(유)": "hyowon.lee@ecolab.com",
-    "㈜남강": "hckeum@nkcc.co.kr", "한국에이피이": "korape@daum.net",
-    "아그라나프루트코리아㈜": "Tae-hun.HA@agrana.com", "(유)사조CPK": "jungwhan.kim@sajo.co.kr",
-    "㈜코맥스인터내셔널": "jy.13.park@gmail.com", "롯데웰푸드(주) (유지)": "MYUNGHO.JUNG@lotte.net",
-    "(주)바름": "buldoglee0@naver.com", "씨.에스에프㈜": "csfkmg@csfood.com",
-    "(주)나래에프앤씨": "naraee@naraee.com", "㈜일신웰스": "sgbok@ise.co.kr",
-    "(주)티알코리아": "parkkp00@gmail.com", "동성글로벌": "jun@dsbiz.co.kr",
-    "㈜진성에프엠": "rktnr@jsfm.co.kr", "(주)주피터인터내셔널": "jupitercs@jupiterintl.co.kr",
-    "㈜티오에프": "sunny@tofkorea.com", "㈜비케이바이오": "jhcho@bkbio.com",
-    "㈜제이케이뉴트라": "main@jknutra.com", "대종자임스": "djzymes@naver.com",
-    "본식품": "may7988@hanmail.net", "성원에프원(법인)": "sungwon4871@hanmail.net",
+    "테트라팩(유)": "kevin.kil@tetrapak.com, Caron.Lee@tetrapak.com",
+    "SIG Combibloc(인천세관장)": "harris.kim@sig.biz",
+    "에스아이지패키징코리아": "youngsam.moon@sig.biz",
+    "㈜한국팩키지": "jspark40@hkpak.co.kr, wjlim@hkpak.co.kr",
+    "㈜케이아이비": "gq555@naver.com, twins_kyu@hanmail.net",
+    "삼륭물산㈜": "sapp912@srpack.com, kjoonw80@srpack.com",
+    "㈜서일": "seoil@si-straw.com",
+    "삼성포장": "sam5501@hanmail.net, skygod@srpack.com",
+    "국일피앤피 주식회사": "0148ks@hanmail.net, sdjjmjm@daum.net",
+    "명진포장(주)": "mjcartonbox@nate.com",
+    "덕원기업": "tg_kim@dukwontop.com",
+    "현대이피 주식회사": "terious1234@naver.com",
+    "호명화학공업㈜": "bjmin65@naver.com",
+    "신성이노텍㈜ 음성공장": "shinsung@shinsung82.co.kr",
+    "주식회사신원통상": "sinwon111@hanmail.net",
+    "신성이노텍㈜": "shinsung@shinsung82.co.kr",
+    "희성폴리머㈜": "my8490@hspd.co.kr",
+    "동원시스템즈㈜": "shimmanikr@dongwon.com",
+    "㈜피엠아이": "lsy@epmi.co.kr, tax@epmi.co.kr",
+    "㈜유래코": "dlqmdl77@naver.com, kkytop@hanmail.net",
+    "㈜엘컴화인": "sales.h@finewt.com",
+    "에스알테크노팩㈜": "qwemhs@srtechno.co.kr",
+    "고문당인쇄㈜": "jaeho@gomun.co.kr, nbh@gomun.co.kr",
+    "삼육식품(천안)": "cooliris01@naver.com, purchase2@sahmyook.co.kr",
+    "(주)서울에프엔비": "amx2006amx@seoulfnb.co.kr, nronro@seoulfnb.co.kr, dragon3925@seoulfnb.co.kr",
+    "(주)푸드코아": "thyun@foodcore.kr, ebkim@foodcore.k",
+    "(주)참조은에스에프": "dymin1117@chamjoeunsf.co.kr, joonk0328@chamjoeunsf.co.kr",
+    "(주)아인츠푸드": "einsfood@daum.net",
+    "남양유업 경주공장_탈지,생크림": "dsc0620@namyangi.com, ma1677@namyangi.com",
+    "비락_진천": "dhshin@vilac.co.kr",
+    "(주)한국씨엔에스팜": "dltmddyd84@cnspharm.com",
+    "합동산업(주)": "hqct@hdiepoca.com, lness@hdiepoca.com",
+    "명가유업(주)_탈지.생크림": "young-155@daum.net, milk861@naver.com",
+    "㈜데어리젠": "woong5156@dairyzen.co.kr",
+    "동그린주식회사": "egreen11@eastgreen.co.kr, hseol9495@eastgreen.co.kr, lgyjrd30@eastgreen.co.kr",
+    "유라가": "cpuya2002@hanmail.net, 4modnee@hanmail.net",
+    "(주)제이앤이 아산공장": "kyj8810@jnekorea.com",
+    "푸르밀": "wjdgus8771@purmil.co.kr, dydrmsdk@purmil.co.kr",
+    "(주)조흥": "mongtiz87@choheung.co.kr",
+    "㈜에스알인터내셔널": "y7777@sunrich.co.kr",
+    "범산목장": "yonggi@goodmilk.co.kr, cskim1111@goodmilk.co.kr",
+    "건국유업_상품": "okm1212@kkmh.co.kr, cch0314@kkmh.co.kr",
+    "유성씨앤에프(주)": "jej0218@ys79.com, ahn@ys79.com",
+    "금성이엔씨㈜": "ksenc21@ksenc.co.kr",
+    "새한실리켐㈜": "ahs@sscc.kr",
+    "한국이콜랩(유)": "hyowon.lee@ecolab.com",
+    "㈜남강": "hckeum@nkcc.co.kr",
+    "한국에이피이": "korape@daum.net",
+    "아그라나프루트코리아㈜": "Tae-hun.HA@agrana.com",
+    "(유)사조CPK": "jungwhan.kim@sajo.co.kr",
+    "㈜코맥스인터내셔널": "jy.13.park@gmail.com, info@comaxkorea.com",
+    "롯데웰푸드(주) (유지)": "MYUNGHO.JUNG@lotte.net",
+    "(주)바름": "buldoglee0@naver.com, uk_intel@naver.com",
+    "씨.에스에프㈜": "csfkmg@csfood.com",
+    "(주)나래에프앤씨": "naraee@naraee.com",
+    "㈜일신웰스": "sgbok@ise.co.kr, whlee@ise.co.kr",
+    "(주)티알코리아": "parkkp00@gmail.com",
+    "동성글로벌": "jun@dsbiz.co.kr",
+    "㈜진성에프엠": "rktnr@jsfm.co.kr, sungks@jsfm.co.kr",
+    "(주)주피터인터내셔널": "jupitercs@jupiterintl.co.kr, bobos7370@hanmail.net",
+    "㈜티오에프": "sunny@tofkorea.com, gorge@tofkorea.com",
+    "㈜비케이바이오": "jhcho@bkbio.com, hmkim@bkbio.com",
+    "㈜제이케이뉴트라": "main@jknutra.com, jknutra@gmail.com",
+    "대종자임스": "djzymes@naver.com, daejongbc@naver.com",
+    "본식품": "may7988@hanmail.net",
+    "성원에프원(법인)": "sungwon4871@hanmail.net",
     "(주)선그린": "sungreen@foodtrading.co.kr, sales@foodtrading.co.kr",
     "㈜아로마에프아이": "aroma600@hanmail.net",
-    "미립물산㈜": "ml.corp@milips.co.kr", "㈜엠에스씨": "lim1214@naver.com",
-    "웨스트마이크로": "kimhc1958@naver.com", "이시푸드": "ec1718@hanmail.net",
-    "누리지에프에스": "nuri@nurifs.com", "(주)네추럴웨이": "qkfkadmirna@naturalway.co.kr",
-    "유맥": "khsshk89@umac.co.kr", "기문물산": "ollie-boy@ki-moon.com",
+    "미립물산㈜": "ml.corp@milips.co.kr",
+    "㈜엠에스씨": "lim1214@naver.com, qc1@msckorea.com, sales12@msckorea.com",
+    "웨스트마이크로": "kimhc1958@naver.com",
+    "이시푸드": "ec1718@hanmail.net",
+    "누리지에프에스": "nuri@nurifs.com",
+    "(주)네추럴웨이": "qkfkadmirna@naturalway.co.kr",
+    "유맥": "khsshk89@umac.co.kr",
+    "기문물산": "ollie-boy@ki-moon.com",
     "해찬솔푸드": "hcsfood@naver.com, kimkhj123@naver.com",
-    "㈜중앙타프라": "c3122246@naver.com",
-    "에스앤이티(주)": "jsshin@snet7.com", "(주)희창유업": "sunep@heechang.co.kr",
-    "㈜앤스에프에스": "ahnsfs0@naver.com", "프레시코": "wjs13@freshico.co.kr",
-    "㈜동은(탈지)": "dongeun@defc.co.kr", "㈜태영에프에이": "mtkim9702@naver.com",
-    "브랜탁코리아㈜": "robin.lee@brenntag-asia.com", "㈜뉴트렉스테크놀러지": "jyjang@nutrex.co.kr",
-    "(주)삼익유가공": "sesarr@samikdairy.com", "주식회사 혜원": "haeom222@nate.com",
-    "제이에프에프(법인)": "aroma@jffaroma.com", "녹스코리아㈜": "yrlee@nocks.co.kr",
-    "주식회사 제이씨월드(원료)": "jcw-kr@samjungflavor.co.kr", "남영상사주식회사": "hglee@namyung.com",
-    "송은통상㈜": "chulminkim@songeun.com", "㈜빅솔반월공장": "hymkim@vixxol.com",
-    "휴나텍": "hunatech@hunatech.co.kr", "케이피씨": "ytw8484@naver.com",
-    "㈜와이씨에프": "ycfinc@naver.com", "서울향료㈜": "kskim@seoulfnf.com",
-    "디에프아이": "dfi899@hanmail.net", "티앤피코리아": "tnpjip@naver.com",
-    "한국베름주식회사": "jhoh2010@bereum.com", "㈜조향": "jw.lim@chohyang.co.kr",
-    "한국마쯔다니(주)": "dmshin@matsutani.co.kr", "㈜삼화에프앤에프": "sales@samhwafnf.co.kr",
-    "화인향료㈜": "finekorea@finekorea.biz", "성원에프아이": "mkkim@sungonefi.co.kr",
-    "향림산업㈜": "jspark@hyangrim.co.kr", "삼정향료": "jslee@samjungflavor.co.kr",
-    "주식회사지금": "jigumsales@gmail.com", "한빛향료": "soondol2@hffaroma.com",
-    "삼인케미칼": "saminkoreaco@gmail.com", "(주)한불화농": "kjh@fka.co.kr, ysh282@fka.co.kr",
-    "베리에프앤비": "verryfnb@gmail.com", "주식회사 원아": "wonacorp@gmail.com",
-    "아로마라인주식회사": "csfjyy@csfood.com", "트라이콤바이오": "asa@tricomkorea.com",
-    "에이스향료": "ace@acefl.co.kr", "제이제이글로벌": "dpark@jj-global.kr",
-    "빙그레_원재료": "hoon7500@bing.co.kr", "(주)세보글로벌": "wyshin@sbbiz.co.kr",
-    "에이치와이푸드텍": "hyfoodtech@naver.com", "(주)동광상사": "dksalt@dksalt.co.kr",
-    "㈜제이스에프아이": "jsmsales@jsmfood.com", "엔바이오텍": "sales@nbiotech.co.kr",
-    "㈜네오크레마": "mjoeon@cremar.co.kr", "㈜성천": "sbjeon@sungchun.co.kr",
-    "신한솔루션 주식회사": "shinhan4199@naver.com", "젤텍": "huo@geltech.co.kr",
-    "선경트레이딩㈜": "sales@sktkorea.com", "(주)건우에프피": "naree8507@nate.com",
-    "아이비티 주식회사": "bill@eibt.co.kr", "현진그린밀 (주)": "queserz@food-green.co.kr",
-    "(주)에이치엠": "ykyun0131@gmail.com", "㈜제이더스화학": "jthus@jthus.co.kr",
-    "보락": "cykim@bolak.co.kr", "케이솔트㈜": "kk1004kk81@gmail.com",
-    "㈜제이에스켐트론": "skc@jschemtron.com", "에프시아로마㈜": "fcaroma53@naver.com",
-    "㈜광일아산공장": "smchoi@kwangil.co.kr", "㈜한국카라겐": "sales@kocara.com",
-    "㈜대평": "chunsh@daepyung.co.kr", "성지물산": "sungjicor@hanmail.net",
-    "유일에프아이": "yuilfi@naver.com", "(주)삼우티.디": "khchoi@samwootd.com",
+    "㈜중앙타프라": "c3122246@naver.com, xkfmp001@tafla.co.kr",
+    "에스앤이티(주)": "jsshin@snet7.com",
+    "(주)희창유업": "sunep@heechang.co.kr",
+    "㈜앤스에프에스": "ahnsfs0@naver.com",
+    "프레시코": "wjs13@freshico.co.kr",
+    "㈜동은(탈지)": "dongeun@defc.co.kr, sykmc303@daum.net",
+    "㈜태영에프에이": "mtkim9702@naver.com",
+    "브랜탁코리아㈜": "sara.kim@brenntag-asia.com, olive.lee@brenntag-asia.com",
+    "㈜뉴트렉스테크놀러지": "jyjang@nutrex.co.kr, nutrex@nutrex.co.kr",
+    "(주)삼익유가공": "sesarr@samikdairy.com",
+    "주식회사 혜원": "haeom222@nate.com",
+    "제이에프에프(법인)": "aroma@jffaroma.com, sales@jffaroma.com",
+    "녹스코리아㈜": "yrlee@nocks.co.kr",
+    "주식회사 제이씨월드(원료)": "jcw-kr@samjungflavor.co.kr",
+    "남영상사주식회사": "hglee@namyung.com",
+    "송은통상㈜": "chulminkim@songeun.com, shkim@songeun.com",
+    "㈜빅솔반월공장": "hymkim@vixxol.com",
+    "휴나텍": "hunatech@hunatech.co.kr",
+    "케이피씨": "ytw8484@naver.com, kpcco95@daum.net",
+    "㈜와이씨에프": "ycfinc@naver.com",
+    "서울향료㈜": "kskim@seoulfnf.com, sales@seoulfnf.com",
+    "디에프아이": "dfi899@hanmail.net",
+    "티앤피코리아": "tnpjip@naver.com",
+    "한국베름주식회사": "jhoh2010@bereum.com",
+    "㈜조향": "jw.lim@chohyang.co.kr",
+    "한국마쯔다니(주)": "dmshin@matsutani.co.kr, dank1020@gmail.com",
+    "㈜삼화에프앤에프": "sales@samhwafnf.co.kr, shqc@samhwafnf.co.kr",
+    "화인향료㈜": "finekorea@finekorea.biz",
+    "성원에프아이": "mkkim@sungonefi.co.kr",
+    "향림산업㈜": "jspark@hyangrim.co.kr, supplychain@hyangrim.co.kr",
+    "삼정향료": "jslee@samjungflavor.co.kr",
+    "주식회사지금": "jigumsales@gmail.com",
+    "한빛향료": "soondol2@hffaroma.com",
+    "삼인케미칼": "saminkoreaco@gmail.com",
+    "(주)한불화농": "kjh@fka.co.kr, ysh282@fka.co.kr",
+    "베리에프앤비": "verryfnb@gmail.com",
+    "주식회사 원아": "wonacorp@gmail.com",
+    "아로마라인주식회사": "csfjyy@csfood.com",
+    "트라이콤바이오": "asa@tricomkorea.com",
+    "에이스향료": "ace@acefl.co.kr",
+    "제이제이글로벌": "dpark@jj-global.kr",
+    "빙그레_원재료": "hoon7500@bing.co.kr",
+    "(주)세보글로벌": "wyshin@sbbiz.co.kr",
+    "에이치와이푸드텍": "hyfoodtech@naver.com",
+    "(주)동광상사": "dksalt@dksalt.co.kr",
+    "㈜제이스에프아이": "jsmsales@jsmfood.com",
+    "엔바이오텍": "sales@nbiotech.co.kr",
+    "㈜네오크레마": "mjoeon@cremar.co.kr",
+    "㈜성천": "sbjeon@sungchun.co.kr",
+    "신한솔루션 주식회사": "shinhan4199@naver.com",
+    "젤텍": "huo@geltech.co.kr",
+    "선경트레이딩㈜": "sales@sktkorea.com",
+    "(주)건우에프피": "naree8507@nate.com",
+    "아이비티 주식회사": "bill@eibt.co.kr",
+    "현진그린밀 (주)": "queserz@food-green.co.kr",
+    "(주)에이치엠": "ykyun0131@gmail.com, kspark@hmpm.net",
+    "㈜제이더스화학": "jthus@jthus.co.kr",
+    "보락": "cykim@bolak.co.kr",
+    "케이솔트㈜": "kk1004kk81@gmail.com, ksalt8001@bill36524.com",
+    "㈜제이에스켐트론": "skc@jschemtron.com",
+    "에프시아로마㈜": "fcaroma53@naver.com",
+    "㈜광일아산공장": "smchoi@kwangil.co.kr, yg@kwangil.co.kr",
+    "㈜한국카라겐": "sales@kocara.com",
+    "㈜대평": "chunsh@daepyung.co.kr",
+    "성지물산": "sungjicor@hanmail.net",
+    "유일에프아이": "yuilfi@naver.com",
+    "(주)삼우티.디": "khchoi@samwootd.com",
     "농업회사법인 주식회사 보림제다": "piona1990@daum.net",
-    "(주)파이토메디": "jkhwang@yonsei.ac.kr", "코스맥스엔에스": "jangjihwan@cosmaxnbt.com",
-    "가우인터내셔날㈜": "pje@gauinter.com", "우리피엔에프": "okniceyou@korea.com",
-    "유성식품": "hisballad@nate.com", "(주)뉴웨이브코퍼레이션": "nw-official@naver.com",
-    "주식회사 앤앤피": "nnpfnb@gmail.com", "케이엔바이오": "knbiocare@gmail.com",
-    "제이와이(JY)유통": "palduk5@naver.com", "어니언즈 주식회사": "daoom@daoominter.com",
-    "에이치엔바이오": "hbio@hbio21.com", "한가람지에프": "hangaramgf@hangaramgf.com",
-    "엠엔에스코리아": "hmkim@mnskorea.net", "주식회사 예산농산": "yesanjam@naver.com",
-    "유니언상사": "uniontradingkr@gmail.com", "대상다이브스": "yang_juyoung@daesang.com",
-    "농업회사법인 수산복해": "yst054@naver.com", "리첼스코리아": "bill@richealth.co.kr",
-    "파텍상사": "jc@parteckcorp.com", "솔시드": "smss1444@naver.com",
-    "신화트레이딩": "shtrad@hanmail.net", "인크레더블 주식회사": "dhkim@incredouble.com",
-    "㈜테크니아": "msjung@techneer.com", "비전바이오켐": "minsu.kim@bision.co.kr",
-    "가우리트레이딩": "gauree@gauree.net", "제이원상사(신규)": "nanana9988@hanmail.net",
-    "벧엘통상": "betheltrade@naver.com", "프리맨뉴트라(유)": "dean.yang@Freemennutra.com",
-    "피엠아이바이오텍": "lena.heo@pmibiotech.com", "비금농협": "darling-i@hanmail.net",
-    "(주)미르인터내셔날": "asca3812@mirinter.co.kr", "주식회사 태성": "taesung@tae-sung.com",
-    "㈜교토아이엔씨": "info@gyoto.com", "가향": "gh37@gahyang.kr",
-    "㈜홀리스틱바이오": "sojungkim@holisticbio.com", "㈜파르마코리아": "syi0603@parmakorea.co.kr",
-    "㈜뉴트리_원료": "swseo@inewtree.com", "메이": "mayjs1@naver.com",
-    "농업회사법인 ㈜보향다원": "js.choi@bohyang.com", "해인향료": "jhs20900@hanmail.net",
-    "알프스": "dkpark@alfskorea.com", "(주)청우라이프사이언스": "hyunse7@chungwools.com",
-    "㈜빅솔": "hymkim@vixxol.com", "티지에프": "sosung@dearfood.co.kr"
+    "(주)파이토메디": "jkhwang@yonsei.ac.kr",
+    "코스맥스엔에스": "jangjihwan@cosmaxnbt.com",
+    "가우인터내셔날㈜": "pje@gauinter.com",
+    "우리피엔에프": "okniceyou@korea.com",
+    "유성식품": "hisballad@nate.com",
+    "(주)뉴웨이브코퍼레이션": "nw-official@naver.com",
+    "주식회사 앤앤피": "nnpfnb@gmail.com",
+    "케이엔바이오": "knbiocare@gmail.com",
+    "제이와이(JY)유통": "palduk5@naver.com",
+    "어니언즈 주식회사": "onionz77@naver.com",
+    "에이치엔바이오": "hbio@hbio21.com",
+    "한가람지에프": "hangaramgf@hangaramgf.com",
+    "엠엔에스코리아": "hmkim@mnskorea.net",
+    "주식회사 예산농산": "yesanjam@naver.com",
+    "유니언상사": "uniontradingkr@gmail.com",
+    "대상다이브스": "yang_juyoung@daesang.com",
+    "농업회사법인 수산복해": "yst054@naver.com",
+    "리첼스코리아": "bill@richealth.co.kr, younho@richealth.co.kr",
+    "파텍상사": "jc@parteckcorp.com",
+    "솔시드": "smss1444@naver.com",
+    "신화트레이딩": "shtrad@hanmail.net",
+    "인크레더블 주식회사": "dhkim@incredouble.com",
+    "㈜테크니아": "msjung@techneer.com",
+    "비전바이오켐": "minsu.kim@bision.co.kr",
+    "가우리트레이딩": "gauree@gauree.net",
+    "제이원상사(신규)": "nanana9988@hanmail.net",
+    "벧엘통상": "betheltrade@naver.com",
+    "프리맨뉴트라(유)": "dean.yang@Freemennutra.com",
+    "피엠아이바이오텍": "lena.heo@pmibiotech.com",
+    "비금농협": "darling-i@hanmail.net",
+    "(주)미르인터내셔날": "asca3812@mirinter.co.kr",
+    "주식회사 태성": "taesung@tae-sung.com",
+    "㈜교토아이엔씨": "info@gyoto.com",
+    "가향": "gh37@gahyang.kr",
+    "㈜홀리스틱바이오": "sojungkim@holisticbio.com",
+    "㈜파르마코리아": "syi0603@parmakorea.co.kr",
+    "㈜뉴트리_원료": "swseo@inewtree.com",
+    "메이": "mayjs1@naver.com",
+    "농업회사법인 ㈜보향다원": "js.choi@bohyang.com",
+    "해인향료": "jhs20900@hanmail.net",
+    "알프스": "dkpark@alfskorea.com",
+    "(주)청우라이프사이언스": "hyunse7@chungwools.com",
+    "㈜빅솔": "hymkim@vixxol.com",
+    "티지에프": "sosung@dearfood.co.kr"
 }
-COMPANY_EMAIL_DICT["담당자"] = "rhkrwjdgur@yonseidairy.com"
 
-# 에러 없는 클리닝된 이메일 세팅
-DEFAULT_BULK_EMAILS_CLEANED = 'kevin.kil@tetrapak.com, harris.kim@sig.biz, youngsam.moon@sig.biz, eshwang@hkpak.co.kr, gq555@naver.com, sapp912@srpack.com, seoil@si-straw.com, sam5501@hanmail.net, 0148ks@hanmail.net, mjcartonbox@nate.com, tg_kim@dukwontop.com, terious1234@naver.com, bjmin65@naver.com, sinwon111@hanmail.net, my8490@hspd.co.kr, shimmanikr@dongwon.com, lsy@epmi.co.kr, dlqmdl77@naver.com, sales.h@finewt.com, qwemhs@srtechno.co.kr, jaeho@gomun.co.kr, cooliris01@naver.com, amx2006amx@seoulfnb.co.kr, thyun@foodcore.kr, dymin1117@chamjoeunsf.co.kr, joonk0328@chamjoeunsf.co.kr, einsfood@daum.net, dsc0620@namyangi.com, dhshin@vilac.co.kr, dltmddyd84@cnspharm.com, hqct@hdiepoca.com, young-155@daum.net, woong5156@dairyzen.co.kr, egreen11@eastgreen.co.kr, cpuya2002@hanmail.net, kyj8810@jnekorea.com, wjdgus8771@purmil.co.kr, mongtiz87@choheung.co.kr, y7777@sunrich.co.kr, yonggi@goodmilk.co.kr, okm1212@kkmh.co.kr, jej0218@ys79.com, ksenc21@ksenc.co.kr, ahs@sscc.kr, hyowon.lee@ecolab.com, hckeum@nkcc.co.kr, korape@daum.net, Tae-hun.HA@agrana.com, jungwhan.kim@sajo.co.kr, jy.13.park@gmail.com, MYUNGHO.JUNG@lotte.net, buldoglee0@naver.com, csfkmg@csfood.com, naraee@naraee.com, sgbok@ise.co.kr, parkkp00@gmail.com, jun@dsbiz.co.kr, rktnr@jsfm.co.kr, jupitercs@jupiterintl.co.kr, sunny@tofkorea.com, jhcho@bkbio.com, main@jknutra.com, djzymes@naver.com, may7988@hanmail.net, sungwon4871@hanmail.net, sungreen@foodtrading.co.kr, sales@foodtrading.co.kr, aroma600@hanmail.net, ml.corp@milips.co.kr, lim1214@naver.com, kimhc1958@naver.com, ec1718@hanmail.net, nuri@nurifs.com, qkfkadmirna@naturalway.co.kr, khsshk89@umac.co.kr, ollie-boy@ki-moon.com, hcsfood@naver.com, kimkhj123@naver.com, c3122246@naver.com, jsshin@snet7.com, sunep@heechang.co.kr, ahnsfs0@naver.com, wjs13@freshico.co.kr, dongeun@defc.co.kr, mtkim9702@naver.com, robin.lee@brenntag-asia.com, jyjang@nutrex.co.kr, sesarr@samikdairy.com, haeom222@nate.com, aroma@jffaroma.com, yrlee@nocks.co.kr, jcw-kr@samjungflavor.co.kr, hglee@namyung.com, chulminkim@songeun.com, hunatech@hunatech.co.kr, ytw8484@naver.com, ycfinc@naver.com, kskim@seoulfnf.com, dfi899@hanmail.net, tnpjip@naver.com, jhoh2010@bereum.com, jw.lim@chohyang.co.kr, dmshin@matsutani.co.kr, sales@samhwafnf.co.kr, finekorea@finekorea.biz, mkkim@sungonefi.co.kr, jspark@hyangrim.co.kr, jslee@samjungflavor.co.kr, jigumsales@gmail.com, soondol2@hffaroma.com, saminkoreaco@gmail.com, kjh@fka.co.kr, ysh282@fka.co.kr, verryfnb@gmail.com, wonacorp@gmail.com, csfjyy@csfood.com, asa@tricomkorea.com, ace@acefl.co.kr, dpark@jj-global.kr, hoon7500@bing.co.kr, wyshin@sbbiz.co.kr, hyfoodtech@naver.com, dksalt@dksalt.co.kr, jsmsales@jsmfood.com, sales@nbiotech.co.kr, mjoeon@cremar.co.kr, sbjeon@sungchun.co.kr, shinhan4199@naver.com, huo@geltech.co.kr, sales@sktkorea.com, naree8507@nate.com, bill@eibt.co.kr, queserz@food-green.co.kr, ykyun0131@gmail.com, jthus@jthus.co.kr, cykim@bolak.co.kr, kk1004kk81@gmail.com, skc@jschemtron.com, fcaroma53@naver.com, smchoi@kwangil.co.kr, sales@kocara.com, chunsh@daepyung.co.kr, sungjicor@hanmail.net, yuilfi@naver.com, khchoi@samwootd.com, piona1990@daum.net, jkhwang@yonsei.ac.kr, jangjihwan@cosmaxnbt.com, pje@gauinter.com, okniceyou@korea.com, hisballad@nate.com, nw-official@naver.com, nnpfnb@gmail.com, knbiocare@gmail.com, palduk5@naver.com, daoom@daoominter.com, hbio@hbio21.com, hangaramgf@hangaramgf.com, hmkim@mnskorea.net, yesanjam@naver.com, uniontradingkr@gmail.com, yang_juyoung@daesang.com, yst054@naver.com, bill@richealth.co.kr, jc@parteckcorp.com, smss1444@naver.com, shtrad@hanmail.net, dhkim@incredouble.com, msjung@techneer.com, minsu.kim@bision.co.kr, gauree@gauree.net, nanana9988@hanmail.net, betheltrade@naver.com, dean.yang@Freemennutra.com, lena.heo@pmibiotech.com, darling-i@hanmail.net, asca3812@mirinter.co.kr, taesung@tae-sung.com, info@gyoto.com, gh37@gahyang.kr, sojungkim@holisticbio.com, syi0603@parmakorea.co.kr, swseo@inewtree.com, mayjs1@naver.com, js.choi@bohyang.com, jhs20900@hanmail.net, dkpark@alfskorea.com, hyunse7@chungwools.com, hymkim@vixxol.com, sosung@dearfood.co.kr'
+# 에러 없는 클리닝된 딕셔너리 기반 일괄 발송용 이메일 자동 세팅 (중복 제거)
+_all_bulk_emails = []
+for comp in TARGET_COMPANIES:
+    if comp == "선택하세요": continue
+    ems = [e.strip() for e in COMPANY_EMAIL_DICT.get(comp, "").split(",") if e.strip()]
+    for e in ems:
+        if e not in _all_bulk_emails:
+            _all_bulk_emails.append(e)
+
+if "rhkrwjdgur@yonseidairy.com" not in _all_bulk_emails:
+    _all_bulk_emails.append("rhkrwjdgur@yonseidairy.com")
+
+DEFAULT_BULK_EMAILS_CLEANED = ", ".join(_all_bulk_emails)
 
 DOC_MAX_SCORES = {
     "[제조] (1) 영업신고": 5, "[제조] (2) 인증서": 3, "[제조] (3) 품목제조보고": 5, 
@@ -421,7 +523,11 @@ def send_email(to_email, subject, body, attachment_file=None):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(sender_email, app_pw)
-        server.send_message(msg)
+        
+        # 다중 이메일 처리를 위한 분할 발송 로직
+        to_emails = [e.strip() for e in to_email.split(",") if e.strip()]
+        server.send_message(msg, to_addrs=to_emails)
+        
         server.quit()
         return True, "발송 성공"
     except Exception as e:
@@ -1325,6 +1431,38 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
 # ==========================================
 elif menu == "관리자 업체관리 (메일 발송)":
     st.title("관리자 업체관리 및 안내 메일 발송 시스템")
+    
+    # --- 이메일 주소록 현황 분석 (상단 요약판) ---
+    all_comps = [c for c in TARGET_COMPANIES if c != "선택하세요"]
+    total_comp_count = len(all_comps)
+    multi_email_count = 0
+    email_to_comps = {}
+    
+    for comp in all_comps:
+        ems = [e.strip() for e in COMPANY_EMAIL_DICT.get(comp, "").split(",") if e.strip()]
+        if len(ems) > 1:
+            multi_email_count += 1
+        for e in ems:
+            if e not in email_to_comps:
+                email_to_comps[e] = []
+            email_to_comps[e].append(comp)
+    
+    shared_emails = {e: comps for e, comps in email_to_comps.items() if len(comps) > 1}
+    shared_comp_count = sum(len(comps) for comps in shared_emails.values())
+    
+    st.markdown("### 📊 시스템 이메일 주소록 현황")
+    col_st1, col_st2, col_st3 = st.columns(3)
+    col_st1.metric("총 대상 업체", f"{total_comp_count}개 업체")
+    col_st2.metric("다중 이메일(2~3개) 등록 업체", f"{multi_email_count}개 업체", "담당자 복수 지정됨")
+    col_st3.metric("동일 이메일 공유(중복) 업체", f"{shared_comp_count}개 업체", "계열사/공장간 중복")
+    
+    if shared_emails:
+        with st.expander("이메일 공유(중복) 업체 상세 목록 확인하기"):
+            for em, comps in shared_emails.items():
+                st.markdown(f"- **{em}** : {', '.join(comps)}")
+    st.markdown("---")
+    # ---------------------------------------------
+    
     admin_pw = st.text_input("관리자 비밀번호:", type="password")
 
     if admin_pw == "2082":
@@ -1346,7 +1484,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
             with tab_mail1:
                 st.markdown("### 정기 심사 일괄 안내 메일 발송")
-                st.caption("[안내] 2026년 기준 '거래중', '신규'로 등록된 189개 업체 중, 별도로 안내하실 신성이노텍 이메일을 제외한 **189개** 이메일(일부 복수 이메일 및 관리자 포함)이 자동으로 세팅되어 있습니다.")
+                st.caption("[안내] 딕셔너리에 등록된 모든 이메일이 다중/중복 여부를 스스로 판단하여 누락 없이 자동으로 세팅됩니다.")
                 
                 target_emails_input = st.text_area("수신자 이메일 목록 (쉼표로 구분):", value=DEFAULT_BULK_EMAILS_CLEANED, height=100)
                 
@@ -1509,16 +1647,21 @@ elif menu == "관리자 업체관리 (메일 발송)":
                 
                 st.info(f"**현재 미제출 업체 수:** {len(pending_companies)}개")
                 
-                # 내부 딕셔너리에서 미제출 업체의 이메일만 추출
-                pending_emails = [COMPANY_EMAIL_DICT.get(c, "") for c in pending_companies if COMPANY_EMAIL_DICT.get(c, "")]
+                # 내부 딕셔너리에서 미제출 업체의 이메일만 중복 없이 추출
+                _pending_bulk_emails = []
+                for c in pending_companies:
+                    ems = [e.strip() for e in COMPANY_EMAIL_DICT.get(c, "").split(",") if e.strip()]
+                    for e in ems:
+                        if e not in _pending_bulk_emails:
+                            _pending_bulk_emails.append(e)
                 
                 # 수신 확인을 위해 담당자 이메일 필수 포함
-                if "rhkrwjdgur@yonseidairy.com" not in pending_emails:
-                    pending_emails.append("rhkrwjdgur@yonseidairy.com")
+                if "rhkrwjdgur@yonseidairy.com" not in _pending_bulk_emails:
+                    _pending_bulk_emails.append("rhkrwjdgur@yonseidairy.com")
                 
-                target_emails_input_remind = st.text_area("미제출 수신자 이메일 목록 (쉼표로 구분):", value=", ".join(pending_emails), height=100)
+                target_emails_input_remind = st.text_area("미제출 수신자 이메일 목록 (쉼표로 구분):", value=", ".join(_pending_bulk_emails), height=100)
                 
-                mail_subject_remind = st.text_input("리마인드 메일 제목:", value="[긴급/리마인드] 2026년도 연세유업 협력업체 서류 심사 제출 촉구 안내")
+                mail_subject_remind = st.text_input("리마인드 메일 제목:", value="[긴급/리마인드] 2026년도 연세유업 협력업체 정기 서류 심사 제출 촉구 안내")
                 
                 default_remind_body = """안녕하십니까,
 연세유업 아산공장 품질안전부문 식품안전팀 곽정혁입니다.
