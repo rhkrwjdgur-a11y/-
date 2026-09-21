@@ -31,7 +31,7 @@ SCOPES = [
 GEMINI_MODEL_VISION = "gemini-3.6-flash"
 GEMINI_MODEL_CHAT = "gemini-3.5-flash-lite"
 
-# 2026년 기준 최신화 리스트 (거래중, 신규 필터링 완료 / OKF 제외: 189개)
+# 2026년 기준 최신화 리스트 (거래중, 신규 필터링 완료 / OKF, 헨켈 제외: 188개)
 TARGET_COMPANIES = [
     "선택하세요",
     "테트라팩(유)", "SIG Combibloc(인천세관장)", "에스아이지패키징코리아", "㈜한국팩키지", "㈜케이아이비",
@@ -55,7 +55,7 @@ TARGET_COMPANIES = [
     "주식회사 제이씨월드(원료)", "남영상사주식회사", "송은통상㈜", "㈜빅솔반월공장", "휴나텍",
     "케이피씨", "㈜와이씨에프", "서울향료㈜", "디에프아이", "티앤피코리아",
     "한국베름주식회사", "㈜조향", "한국마쯔다니(주)", "㈜삼화에프앤에프", "화인향료㈜",
-    "성원지에이치", "향림산업㈜", "삼정향료", "주식회사지금", "한빛향료",
+    "성원에프아이", "향림산업㈜", "삼정향료", "주식회사지금", "한빛향료",
     "삼인케미칼", "(주)한불화농", "베리에프앤비", "주식회사 원아", "아로마라인주식회사",
     "트라이콤바이오", "에이스향료", "제이제이글로벌", "빙그레_원재료", "(주)세보글로벌",
     "에이치와이푸드텍", "(주)동광상사", "㈜제이스에프아이", "엔바이오텍", "㈜네오크레마",
@@ -181,7 +181,7 @@ COMPANY_EMAIL_DICT = {
     "한국마쯔다니(주)": "dmshin@matsutani.co.kr, dank1020@gmail.com",
     "㈜삼화에프앤에프": "sales@samhwafnf.co.kr, shqc@samhwafnf.co.kr",
     "화인향료㈜": "finekorea@finekorea.biz",
-    "성원지에이치": "mkkim@sungonefi.co.kr",
+    "성원에프아이": "mkkim@sungonefi.co.kr",
     "향림산업㈜": "jspark@hyangrim.co.kr, supplychain@hyangrim.co.kr",
     "삼정향료": "jslee@samjungflavor.co.kr",
     "주식회사지금": "jigumsales@gmail.com",
@@ -264,7 +264,8 @@ COMPANY_EMAIL_DICT = {
     "알프스": "dkpark@alfskorea.com",
     "(주)청우라이프사이언스": "hyunse7@chungwools.com",
     "㈜빅솔": "hymkim@vixxol.com",
-    "티지에프": "sosung@dearfood.co.kr"
+    "티지에프": "sosung@dearfood.co.kr",
+    "담당자": "rhkrwjdgur@yonseidairy.com"
 }
 
 # 에러 없는 클리닝된 딕셔너리 기반 일괄 발송용 이메일 자동 세팅 (중복 제거)
@@ -1091,9 +1092,13 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 st.warning("[안내] 아직 구글 시트에 기록된 심사 데이터가 없습니다.")
             else:
                 time_col = log_df.columns[1]
+                # 에러 방지: 텍스트 등 잘못된 날짜 형식은 무시(NaT 처리)하고 멀쩡한 날짜만 파싱
                 log_df[time_col] = pd.to_datetime(log_df[time_col], errors='coerce')
                 
+                # NaT가 아닌 정상적인 날짜만 추출
                 valid_dates = log_df[log_df[time_col].notnull()]
+                
+                # 시트에 정상적인 날짜가 하나도 없을 경우 오늘 날짜로 대체하는 안전 장치 추가
                 if not valid_dates.empty:
                     min_date = valid_dates[time_col].min().date()
                     max_date = valid_dates[time_col].max().date()
@@ -1106,6 +1111,7 @@ elif menu == "관리자 대시보드 (육안 재확인 및 수정)":
                 
                 if len(date_range) == 2:
                     start_date, end_date = date_range
+                    # 정상 날짜인 행들만 필터링 (NaT 제외)
                     mask = (log_df[time_col].dt.date >= start_date) & (log_df[time_col].dt.date <= end_date)
                     filtered_df = log_df.loc[mask]
                 else:
@@ -1476,6 +1482,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
             time_col = log_df.columns[1] if not log_df.empty else None
             if not log_df.empty:
+                # 에러 방지용 coerce 추가
                 log_df[time_col] = pd.to_datetime(log_df[time_col], errors='coerce')
                 # 최신 제출 데이터만 남기고 중복 제거
                 log_df = log_df.sort_values(time_col, ascending=False).drop_duplicates(subset=['업체명', '심사항목'], keep='first')
@@ -1632,7 +1639,7 @@ elif menu == "관리자 업체관리 (메일 발송)":
 
             with tab_mail3:
                 st.markdown("### 미제출 업체 리마인드 메일 발송")
-                st.caption("[안내] 심사 대상 189개 업체 중, 현재까지 시스템을 통해 **서류를 제출하지 않은 대기 업체**만 시스템이 자동으로 추려 이메일을 세팅합니다.")
+                st.caption("[안내] 심사 대상 업체 중, 현재까지 시스템을 통해 **서류를 제출하지 않은 대기 업체**만 시스템이 자동으로 추려 이메일을 세팅합니다.")
                 
                 submitted_set = set(log_df['업체명'].dropna().unique()) if not log_df.empty else set()
                 
